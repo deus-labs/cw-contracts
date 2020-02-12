@@ -1,15 +1,13 @@
 use cosmwasm::errors::Error;
 use cosmwasm::mock::{dependencies, mock_params};
-use cosmwasm::serde::from_slice;
 use cosmwasm::traits::{Api, ReadonlyStorage, Storage};
 use cosmwasm::types::{HumanAddr, Params};
 use cw_storage::ReadonlyPrefixedStorage;
 
-use crate::contract::{bytes_to_u128, handle, init, query, read_u128};
+use crate::contract::{handle, init, query, read_u128};
 use crate::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
 use crate::state::{
-    Amount, Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES,
-    PREFIX_CONFIG,
+    constants_read, total_supply_read, Amount, Constants, PREFIX_ALLOWANCES, PREFIX_BALANCES,
 };
 
 static CANONICAL_LENGTH: usize = 20;
@@ -22,19 +20,11 @@ fn mock_params_height<A: Api>(api: &A, signer: &HumanAddr, height: i64, time: i6
 }
 
 fn get_constants<S: Storage>(storage: &S) -> Constants {
-    let config_storage = ReadonlyPrefixedStorage::new(PREFIX_CONFIG, storage);
-    let data = config_storage
-        .get(KEY_CONSTANTS)
-        .expect("no config data stored");
-    from_slice(&data).expect("invalid data")
+    constants_read(storage).load().unwrap()
 }
 
 fn get_total_supply<S: Storage>(storage: &S) -> u128 {
-    let config_storage = ReadonlyPrefixedStorage::new(PREFIX_CONFIG, storage);
-    let data = config_storage
-        .get(KEY_TOTAL_SUPPLY)
-        .expect("no decimals data stored");
-    return bytes_to_u128(&data).unwrap();
+    total_supply_read(storage).load().unwrap().parse().unwrap()
 }
 
 fn get_balance<S: ReadonlyStorage, A: Api>(api: &A, storage: &S, address: &HumanAddr) -> u128 {

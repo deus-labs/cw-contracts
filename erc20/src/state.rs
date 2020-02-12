@@ -4,14 +4,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm::errors::{contract_err, Result};
-//use cw_storage::{serialize, PrefixedStorage, ReadonlyPrefixedStorage};
+use cosmwasm::traits::{ReadonlyStorage, Storage};
+use cw_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 
-pub const PREFIX_CONFIG: &[u8] = b"config";
 pub const PREFIX_BALANCES: &[u8] = b"balances";
 pub const PREFIX_ALLOWANCES: &[u8] = b"allowances";
 
-pub const KEY_CONSTANTS: &[u8] = b"constants";
-pub const KEY_TOTAL_SUPPLY: &[u8] = b"total_supply";
+const KEY_CONSTANTS: &[u8] = b"constants";
+const KEY_TOTAL_SUPPLY: &[u8] = b"total_supply";
 
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, JsonSchema, NamedType)]
 pub struct Constants {
@@ -48,6 +48,22 @@ impl From<&str> for Amount {
     fn from(raw: &str) -> Self {
         Amount(raw.to_string())
     }
+}
+
+pub fn constants<S: Storage>(storage: &mut S) -> Singleton<S, Constants> {
+    singleton(storage, KEY_CONSTANTS)
+}
+
+pub fn constants_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, Constants> {
+    singleton_read(storage, KEY_CONSTANTS)
+}
+
+pub fn total_supply<S: Storage>(storage: &mut S) -> Singleton<S, Amount> {
+    singleton(storage, KEY_TOTAL_SUPPLY)
+}
+
+pub fn total_supply_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, Amount> {
+    singleton_read(storage, KEY_TOTAL_SUPPLY)
 }
 
 #[cfg(test)]

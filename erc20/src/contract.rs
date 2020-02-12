@@ -7,8 +7,7 @@ use cw_storage::{serialize, PrefixedStorage, ReadonlyPrefixedStorage};
 
 use crate::msg::{AllowanceResponse, BalanceResponse, HandleMsg, InitMsg, QueryMsg};
 use crate::state::{
-    Amount, Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES,
-    PREFIX_CONFIG,
+    constants, total_supply, Amount, Constants, PREFIX_ALLOWANCES, PREFIX_BALANCES,
 };
 
 pub fn init<S: Storage, A: Api>(
@@ -16,7 +15,7 @@ pub fn init<S: Storage, A: Api>(
     _params: Params,
     msg: InitMsg,
 ) -> Result<Response> {
-    let mut total_supply: u128 = 0;
+    let mut total: u128 = 0;
     {
         // Initial balances
         let mut balances_store = PrefixedStorage::new(PREFIX_BALANCES, &mut deps.storage);
@@ -24,7 +23,7 @@ pub fn init<S: Storage, A: Api>(
             let raw_address = deps.api.canonical_address(&row.address)?;
             let amount_raw = row.amount.parse()?;
             balances_store.set(raw_address.as_bytes(), &amount_raw.to_be_bytes());
-            total_supply += amount_raw;
+            total += amount_raw;
         }
     }
 
@@ -39,15 +38,12 @@ pub fn init<S: Storage, A: Api>(
         return contract_err("Decimals must not exceed 18");
     }
 
-    let mut config_store = PrefixedStorage::new(PREFIX_CONFIG, &mut deps.storage);
-    let constants = serialize(&Constants {
+    constants(&mut deps.storage).save(&Constants {
         name: msg.name,
         symbol: msg.symbol,
         decimals: msg.decimals,
     })?;
-    config_store.set(KEY_CONSTANTS, &constants);
-    config_store.set(KEY_TOTAL_SUPPLY, &total_supply.to_be_bytes());
-
+    total_supply(&mut deps.storage).save(&Amount::from(total))?;
     Ok(Response::default())
 }
 

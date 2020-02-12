@@ -16,7 +16,7 @@
           ],
           "properties": {
             "amount": {
-              "type": "string"
+              "$ref": "#/definitions/Amount"
             },
             "spender": {
               "$ref": "#/definitions/HumanAddr"
@@ -39,7 +39,7 @@
           ],
           "properties": {
             "amount": {
-              "type": "string"
+              "$ref": "#/definitions/Amount"
             },
             "recipient": {
               "$ref": "#/definitions/HumanAddr"
@@ -63,7 +63,7 @@
           ],
           "properties": {
             "amount": {
-              "type": "string"
+              "$ref": "#/definitions/Amount"
             },
             "owner": {
               "$ref": "#/definitions/HumanAddr"
@@ -77,6 +77,9 @@
     }
   ],
   "definitions": {
+    "Amount": {
+      "type": "string"
+    },
     "HumanAddr": {
       "type": "string"
     }

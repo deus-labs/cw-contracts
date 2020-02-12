@@ -7,6 +7,11 @@
   ],
   "properties": {
     "balance": {
+      "$ref": "#/definitions/Amount"
+    }
+  },
+  "definitions": {
+    "Amount": {
       "type": "string"
     }
   }

@@ -7,6 +7,11 @@
   ],
   "properties": {
     "allowance": {
+      "$ref": "#/definitions/Amount"
+    }
+  },
+  "definitions": {
+    "Amount": {
       "type": "string"
     }
   }

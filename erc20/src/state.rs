@@ -3,12 +3,16 @@ use named_type_derive::NamedType;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm::errors::{contract_err, Result};
+use cosmwasm::errors::{contract_err, dyn_contract_err, Result};
 use cosmwasm::traits::{ReadonlyStorage, Storage};
-use cw_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
+use cosmwasm::types::CanonicalAddr;
+use cw_storage::{
+    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    Singleton,
+};
 
-pub const PREFIX_BALANCES: &[u8] = b"balances";
-pub const PREFIX_ALLOWANCES: &[u8] = b"allowances";
+const PREFIX_BALANCES: &[u8] = b"balances";
+const PREFIX_ALLOWANCES: &[u8] = b"allowances";
 
 const KEY_CONSTANTS: &[u8] = b"constants";
 const KEY_TOTAL_SUPPLY: &[u8] = b"total_supply";
@@ -35,6 +39,29 @@ impl Amount {
     pub fn validate(&self) -> Result<()> {
         let _ = self.parse()?;
         Ok(())
+    }
+
+    pub fn subtract(&self, other: &Amount) -> Result<Amount> {
+        let here = self.parse()?;
+        let there = other.parse()?;
+        if here < there {
+            return dyn_contract_err(format!(
+                "Insufficient funds: have={}, subtract={}",
+                here, there
+            ));
+        }
+        Ok(Amount::from(here - there))
+    }
+
+    pub fn add(&self, other: &Amount) -> Result<Amount> {
+        let total = self.parse()? + other.parse()?;
+        Ok(Amount::from(total))
+    }
+}
+
+impl Default for Amount {
+    fn default() -> Self {
+        Amount("0".to_string())
     }
 }
 
@@ -64,6 +91,28 @@ pub fn total_supply<S: Storage>(storage: &mut S) -> Singleton<S, Amount> {
 
 pub fn total_supply_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, Amount> {
     singleton_read(storage, KEY_TOTAL_SUPPLY)
+}
+
+pub fn balances<S: Storage>(storage: &mut S) -> Bucket<S, Amount> {
+    bucket(PREFIX_BALANCES, storage)
+}
+
+pub fn balances_read<S: ReadonlyStorage>(storage: &S) -> ReadonlyBucket<S, Amount> {
+    bucket_read(PREFIX_BALANCES, storage)
+}
+
+pub fn allowances<'a, S: Storage>(
+    storage: &'a mut S,
+    owner: &CanonicalAddr,
+) -> Bucket<'a, S, Amount> {
+    Bucket::multilevel(&[PREFIX_ALLOWANCES, owner.as_bytes()], storage)
+}
+
+pub fn allowances_read<'a, S: ReadonlyStorage>(
+    storage: &'a S,
+    owner: &CanonicalAddr,
+) -> ReadonlyBucket<'a, S, Amount> {
+    ReadonlyBucket::multilevel(&[PREFIX_ALLOWANCES, owner.as_bytes()], storage)
 }
 
 #[cfg(test)]

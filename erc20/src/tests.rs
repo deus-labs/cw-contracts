@@ -2,12 +2,11 @@ use cosmwasm::errors::Error;
 use cosmwasm::mock::{dependencies, mock_params};
 use cosmwasm::traits::{Api, ReadonlyStorage, Storage};
 use cosmwasm::types::{HumanAddr, Params};
-use cw_storage::ReadonlyPrefixedStorage;
 
-use crate::contract::{handle, init, query, read_u128};
+use crate::contract::{handle, init, query};
 use crate::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
 use crate::state::{
-    constants_read, total_supply_read, Amount, Constants, PREFIX_ALLOWANCES, PREFIX_BALANCES,
+    allowances_read, balances_read, constants_read, total_supply_read, Amount, Constants,
 };
 
 static CANONICAL_LENGTH: usize = 20;
@@ -31,8 +30,10 @@ fn get_balance<S: ReadonlyStorage, A: Api>(api: &A, storage: &S, address: &Human
     let address_key = api
         .canonical_address(address)
         .expect("canonical_address failed");
-    let balances_storage = ReadonlyPrefixedStorage::new(PREFIX_BALANCES, storage);
-    return read_u128(&balances_storage, address_key.as_bytes()).unwrap();
+    let bal = balances_read(storage)
+        .may_load(address_key.as_bytes())
+        .unwrap();
+    bal.map_or(0, |b| b.parse().unwrap())
 }
 
 fn get_allowance<S: ReadonlyStorage, A: Api>(
@@ -47,10 +48,10 @@ fn get_allowance<S: ReadonlyStorage, A: Api>(
     let spender_raw_address = api
         .canonical_address(spender)
         .expect("canonical_address failed");
-    let allowances_storage = ReadonlyPrefixedStorage::new(PREFIX_ALLOWANCES, storage);
-    let owner_storage =
-        ReadonlyPrefixedStorage::new(owner_raw_address.as_bytes(), &allowances_storage);
-    return read_u128(&owner_storage, spender_raw_address.as_bytes()).unwrap();
+    let allow = allowances_read(storage, &owner_raw_address)
+        .may_load(spender_raw_address.as_bytes())
+        .unwrap();
+    allow.map_or(0, |a| a.parse().unwrap())
 }
 
 mod init {
@@ -581,7 +582,7 @@ mod transfer {
         match transfer_result {
             Ok(_) => panic!("expected error"),
             Err(Error::DynContractErr { msg, .. }) => {
-                assert_eq!(msg, "Insufficient funds: balance=11, required=12")
+                assert_eq!(msg, "Insufficient funds: have=11, subtract=12")
             }
             Err(e) => panic!("unexpected error: {:?}", e),
         }
@@ -823,7 +824,7 @@ mod transfer_from {
         match transfer_result {
             Ok(_) => panic!("expected error"),
             Err(Error::DynContractErr { msg, .. }) => {
-                assert_eq!(msg, "Insufficient allowance: allowance=2, required=3")
+                assert_eq!(msg, "Insufficient funds: have=2, subtract=3")
             }
             Err(e) => panic!("unexpected error: {:?}", e),
         }
@@ -865,7 +866,7 @@ mod transfer_from {
         match transfer_result {
             Ok(_) => panic!("expected error"),
             Err(Error::DynContractErr { msg, .. }) => {
-                assert_eq!(msg, "Insufficient funds: balance=11, required=15")
+                assert_eq!(msg, "Insufficient funds: have=11, subtract=15")
             }
             Err(e) => panic!("unexpected error: {:?}", e),
         }

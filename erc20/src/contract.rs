@@ -135,8 +135,11 @@ fn perform_transfer<T: Storage>(
     to: &CanonicalAddr,
     amount: &Amount,
 ) -> Result<()> {
-    balances(store).update(from.as_bytes(), &|current: Amount| current.subtract(amount))?;
-    balances(store).update(to.as_bytes(), &|current: Amount| current.add(amount))?;
+    balances(store).update(from.as_bytes(), &|current| current.subtract(amount))?;
+    balances(store).may_update(to.as_bytes(), &|current| {
+        let updated = current.unwrap_or_default().add(amount)?;
+        Ok(Some(updated))
+    })?;
     Ok(())
 }
 

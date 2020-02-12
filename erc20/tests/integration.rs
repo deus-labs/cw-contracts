@@ -2,12 +2,10 @@ use cosmwasm::mock::mock_params;
 use cosmwasm::traits::{Api, ReadonlyStorage, Storage};
 use cosmwasm::types::{HumanAddr, Params};
 use cosmwasm_vm::testing::{handle, init, mock_instance, query};
-use cw_storage::ReadonlyPrefixedStorage;
 
-use cw_erc20::contract::read_u128;
 use cw_erc20::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
 use cw_erc20::state::{
-    constants_read, total_supply_read, Amount, Constants, PREFIX_ALLOWANCES, PREFIX_BALANCES,
+    allowances_read, balances_read, constants_read, total_supply_read, Amount, Constants,
 };
 
 static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/cw_erc20.wasm");
@@ -31,8 +29,10 @@ fn get_balance<S: ReadonlyStorage, A: Api>(api: &A, storage: &S, address: &Human
     let address_key = api
         .canonical_address(address)
         .expect("canonical_address failed");
-    let balances_storage = ReadonlyPrefixedStorage::new(PREFIX_BALANCES, storage);
-    return read_u128(&balances_storage, address_key.as_bytes()).unwrap();
+    let bal = balances_read(storage)
+        .may_load(address_key.as_bytes())
+        .unwrap();
+    bal.map_or(0, |b| b.parse().unwrap())
 }
 
 fn get_allowance<S: ReadonlyStorage, A: Api>(
@@ -47,10 +47,10 @@ fn get_allowance<S: ReadonlyStorage, A: Api>(
     let spender_raw_address = api
         .canonical_address(spender)
         .expect("canonical_address failed");
-    let allowances_storage = ReadonlyPrefixedStorage::new(PREFIX_ALLOWANCES, storage);
-    let owner_storage =
-        ReadonlyPrefixedStorage::new(owner_raw_address.as_bytes(), &allowances_storage);
-    return read_u128(&owner_storage, spender_raw_address.as_bytes()).unwrap();
+    let allow = allowances_read(storage, &owner_raw_address)
+        .may_load(spender_raw_address.as_bytes())
+        .unwrap();
+    allow.map_or(0, |a| a.parse().unwrap())
 }
 
 fn address(index: u8) -> HumanAddr {

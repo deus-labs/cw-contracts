@@ -7,7 +7,8 @@ use cw_storage::{serialize, PrefixedStorage, ReadonlyPrefixedStorage};
 
 use crate::msg::{AllowanceResponse, BalanceResponse, HandleMsg, InitMsg, QueryMsg};
 use crate::state::{
-    Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
+    Amount, Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES,
+    PREFIX_CONFIG,
 };
 
 pub fn init<S: Storage, A: Api>(
@@ -21,7 +22,7 @@ pub fn init<S: Storage, A: Api>(
         let mut balances_store = PrefixedStorage::new(PREFIX_BALANCES, &mut deps.storage);
         for row in msg.initial_balances {
             let raw_address = deps.api.canonical_address(&row.address)?;
-            let amount_raw = parse_u128(&row.amount)?;
+            let amount_raw = row.amount.parse()?;
             balances_store.set(raw_address.as_bytes(), &amount_raw.to_be_bytes());
             total_supply += amount_raw;
         }
@@ -74,7 +75,7 @@ pub fn query<S: Storage, A: Api>(deps: &Extern<S, A>, msg: QueryMsg) -> Result<V
             let address_key = deps.api.canonical_address(&address)?;
             let balance = read_balance(&deps.storage, &address_key)?;
             let out = serialize(&BalanceResponse {
-                balance: balance.to_string(),
+                balance: Amount::from(balance),
             })?;
             Ok(out)
         }
@@ -83,7 +84,7 @@ pub fn query<S: Storage, A: Api>(deps: &Extern<S, A>, msg: QueryMsg) -> Result<V
             let spender_key = deps.api.canonical_address(&spender)?;
             let allowance = read_allowance(&deps.storage, &owner_key, &spender_key)?;
             let out = serialize(&AllowanceResponse {
-                allowance: allowance.to_string(),
+                allowance: Amount::from(allowance),
             })?;
             Ok(out)
         }
@@ -94,11 +95,11 @@ fn try_transfer<S: Storage, A: Api>(
     deps: &mut Extern<S, A>,
     params: Params,
     recipient: &HumanAddr,
-    amount: &str,
+    amount: &Amount,
 ) -> Result<Response> {
     let sender_address_raw = &params.message.signer;
     let recipient_address_raw = deps.api.canonical_address(recipient)?;
-    let amount_raw = parse_u128(amount)?;
+    let amount_raw = amount.parse()?;
 
     perform_transfer(
         &mut deps.storage,
@@ -120,12 +121,12 @@ fn try_transfer_from<S: Storage, A: Api>(
     params: Params,
     owner: &HumanAddr,
     recipient: &HumanAddr,
-    amount: &str,
+    amount: &Amount,
 ) -> Result<Response> {
     let spender_address_raw = &params.message.signer;
     let owner_address_raw = deps.api.canonical_address(owner)?;
     let recipient_address_raw = deps.api.canonical_address(recipient)?;
-    let amount_raw = parse_u128(amount)?;
+    let amount_raw = amount.parse()?;
 
     let mut allowance = read_allowance(&deps.storage, &owner_address_raw, &spender_address_raw)?;
     if allowance < amount_raw {
@@ -160,11 +161,11 @@ fn try_approve<S: Storage, A: Api>(
     deps: &mut Extern<S, A>,
     params: Params,
     spender: &HumanAddr,
-    amount: &str,
+    amount: &Amount,
 ) -> Result<Response> {
     let owner_address_raw = &params.message.signer;
     let spender_address_raw = deps.api.canonical_address(spender)?;
-    let amount_raw = parse_u128(amount)?;
+    let amount_raw = amount.parse()?;
     write_allowance(
         &mut deps.storage,
         &owner_address_raw,
@@ -220,14 +221,6 @@ pub fn read_u128<S: ReadonlyStorage>(store: &S, key: &[u8]) -> Result<u128> {
         Some(data) => bytes_to_u128(&data),
         None => Ok(0u128),
     };
-}
-
-// Source must be a decadic integer >= 0
-pub fn parse_u128(source: &str) -> Result<u128> {
-    match source.parse::<u128>() {
-        Ok(value) => Ok(value),
-        Err(_) => contract_err("Error while parsing string to u128"),
-    }
 }
 
 fn read_balance<S: Storage>(store: &S, owner: &CanonicalAddr) -> Result<u128> {

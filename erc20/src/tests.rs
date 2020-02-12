@@ -8,7 +8,8 @@ use cw_storage::ReadonlyPrefixedStorage;
 use crate::contract::{bytes_to_u128, handle, init, query, read_u128};
 use crate::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
 use crate::state::{
-    Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
+    Amount, Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES,
+    PREFIX_CONFIG,
 };
 
 static CANONICAL_LENGTH: usize = 20;
@@ -62,86 +63,6 @@ fn get_allowance<S: ReadonlyStorage, A: Api>(
     return read_u128(&owner_storage, spender_raw_address.as_bytes()).unwrap();
 }
 
-mod helpers {
-    use crate::contract::parse_u128;
-    use cosmwasm::errors::Error;
-
-    #[test]
-    fn works_for_simple_inputs() {
-        assert_eq!(parse_u128("0").expect("could not be parsed"), 0);
-        assert_eq!(parse_u128("1").expect("could not be parsed"), 1);
-        assert_eq!(parse_u128("345").expect("could not be parsed"), 345);
-        assert_eq!(
-            parse_u128("340282366920938463463374607431768211455").expect("could not be parsed"),
-            340282366920938463463374607431768211455
-        );
-    }
-
-    #[test]
-    fn works_for_leading_zeros() {
-        assert_eq!(parse_u128("01").expect("could not be parsed"), 1);
-        assert_eq!(parse_u128("001").expect("could not be parsed"), 1);
-        assert_eq!(parse_u128("0001").expect("could not be parsed"), 1);
-    }
-
-    #[test]
-    fn errors_for_empty_input() {
-        match parse_u128("") {
-            Ok(_) => panic!("must not pass"),
-            Err(Error::ContractErr { msg, .. }) => {
-                assert_eq!(msg, "Error while parsing string to u128")
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-    }
-
-    #[test]
-    fn errors_for_values_out_of_range() {
-        match parse_u128("-1") {
-            Ok(_) => panic!("must not pass"),
-            Err(Error::ContractErr { msg, .. }) => {
-                assert_eq!(msg, "Error while parsing string to u128")
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-
-        match parse_u128("340282366920938463463374607431768211456") {
-            Ok(_) => panic!("must not pass"),
-            Err(Error::ContractErr { msg, .. }) => {
-                assert_eq!(msg, "Error while parsing string to u128")
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-    }
-
-    #[test]
-    fn fails_for_non_decadic_strings() {
-        match parse_u128("0xAB") {
-            Ok(_) => panic!("must not pass"),
-            Err(Error::ContractErr { msg, .. }) => {
-                assert_eq!(msg, "Error while parsing string to u128")
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-
-        match parse_u128("0xab") {
-            Ok(_) => panic!("must not pass"),
-            Err(Error::ContractErr { msg, .. }) => {
-                assert_eq!(msg, "Error while parsing string to u128")
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-
-        match parse_u128("0b1100") {
-            Ok(_) => panic!("must not pass"),
-            Err(Error::ContractErr { msg, .. }) => {
-                assert_eq!(msg, "Error while parsing string to u128")
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-    }
-}
-
 mod init {
     use super::*;
 
@@ -154,7 +75,7 @@ mod init {
             decimals: 9,
             initial_balances: [InitialBalance {
                 address: HumanAddr("addr0000".to_string()),
-                amount: "11223344".to_string(),
+                amount: Amount::from("11223344"),
             }]
             .to_vec(),
         };
@@ -203,15 +124,15 @@ mod init {
             initial_balances: [
                 InitialBalance {
                     address: HumanAddr("addr0000".to_string()),
-                    amount: "11".to_string(),
+                    amount: Amount::from("11"),
                 },
                 InitialBalance {
                     address: HumanAddr("addr1111".to_string()),
-                    amount: "22".to_string(),
+                    amount: Amount::from("22"),
                 },
                 InitialBalance {
                     address: HumanAddr("addrbbbb".to_string()),
-                    amount: "33".to_string(),
+                    amount: Amount::from("33"),
                 },
             ]
             .to_vec(),
@@ -249,7 +170,7 @@ mod init {
             decimals: 9,
             initial_balances: [InitialBalance {
                 address: HumanAddr("addr0000".to_string()),
-                amount: "9007199254740993".to_string(),
+                amount: Amount::from("9007199254740993"),
             }]
             .to_vec(),
         };
@@ -275,7 +196,7 @@ mod init {
             decimals: 9,
             initial_balances: [InitialBalance {
                 address: HumanAddr("addr0000".to_string()),
-                amount: "100000000000000000000000000".to_string(),
+                amount: Amount::from("100000000000000000000000000"),
             }]
             .to_vec(),
         };
@@ -300,7 +221,7 @@ mod init {
             initial_balances: [InitialBalance {
                 address: HumanAddr("addr0000".to_string()),
                 // 2**128 = 340282366920938463463374607431768211456
-                amount: "340282366920938463463374607431768211456".to_string(),
+                amount: Amount::from("340282366920938463463374607431768211456"),
             }]
             .to_vec(),
         };
@@ -445,15 +366,15 @@ mod transfer {
             initial_balances: vec![
                 InitialBalance {
                     address: HumanAddr("addr0000".to_string()),
-                    amount: "11".to_string(),
+                    amount: Amount::from("11"),
                 },
                 InitialBalance {
                     address: HumanAddr("addr1111".to_string()),
-                    amount: "22".to_string(),
+                    amount: Amount::from("22"),
                 },
                 InitialBalance {
                     address: HumanAddr("addrbbbb".to_string()),
-                    amount: "33".to_string(),
+                    amount: Amount::from("33"),
                 },
             ],
         }
@@ -485,7 +406,7 @@ mod transfer {
         // Transfer
         let transfer_msg = HandleMsg::Transfer {
             recipient: HumanAddr("addr1111".to_string()),
-            amount: "1".to_string(),
+            amount: Amount::from("1"),
         };
         let params2 = mock_params_height(&deps.api, &HumanAddr("addr0000".to_string()), 450, 550);
         let transfer_result = handle(&mut deps, params2, transfer_msg).unwrap();
@@ -534,7 +455,7 @@ mod transfer {
         // Transfer
         let transfer_msg = HandleMsg::Transfer {
             recipient: HumanAddr("addr2323".to_string()),
-            amount: "1".to_string(),
+            amount: Amount::from("1"),
         };
         let params2 = mock_params_height(&deps.api, &HumanAddr("addr0000".to_string()), 450, 550);
         let transfer_result = handle(&mut deps, params2, transfer_msg).unwrap();
@@ -587,7 +508,7 @@ mod transfer {
         // Transfer
         let transfer_msg = HandleMsg::Transfer {
             recipient: HumanAddr("addr1111".to_string()),
-            amount: "0".to_string(),
+            amount: Amount::from("0"),
         };
         let params2 = mock_params_height(&deps.api, &HumanAddr("addr0000".to_string()), 450, 550);
         let transfer_result = handle(&mut deps, params2, transfer_msg).unwrap();
@@ -626,7 +547,7 @@ mod transfer {
         // Transfer
         let transfer_msg = HandleMsg::Transfer {
             recipient: sender.clone(),
-            amount: "3".to_string(),
+            amount: Amount::from("3"),
         };
         let params2 = mock_params_height(&deps.api, &sender, 450, 550);
         let transfer_result = handle(&mut deps, params2, transfer_msg).unwrap();
@@ -663,7 +584,7 @@ mod transfer {
         // Transfer
         let transfer_msg = HandleMsg::Transfer {
             recipient: HumanAddr("addr1111".to_string()),
-            amount: "12".to_string(),
+            amount: Amount::from("12"),
         };
         let params2 = mock_params_height(&deps.api, &HumanAddr("addr0000".to_string()), 450, 550);
         let transfer_result = handle(&mut deps, params2, transfer_msg);
@@ -703,15 +624,15 @@ mod approve {
             initial_balances: vec![
                 InitialBalance {
                     address: HumanAddr("addr0000".to_string()),
-                    amount: "11".to_string(),
+                    amount: Amount::from("11"),
                 },
                 InitialBalance {
                     address: HumanAddr("addr1111".to_string()),
-                    amount: "22".to_string(),
+                    amount: Amount::from("22"),
                 },
                 InitialBalance {
                     address: HumanAddr("addrbbbb".to_string()),
-                    amount: "33".to_string(),
+                    amount: Amount::from("33"),
                 },
             ],
         }
@@ -774,7 +695,7 @@ mod approve {
         let owner = HumanAddr("addr7654".to_string());
         let approve_msg1 = HandleMsg::Approve {
             spender: make_spender(),
-            amount: "334422".to_string(),
+            amount: Amount::from("334422"),
         };
         let params2 = mock_params_height(&deps.api, &owner, 450, 550);
         let transfer_result = handle(&mut deps, params2, approve_msg1).unwrap();
@@ -789,7 +710,7 @@ mod approve {
         // Updated approval
         let approve_msg2 = HandleMsg::Approve {
             spender: make_spender(),
-            amount: "777888".to_string(),
+            amount: Amount::from("777888"),
         };
         let params3 = mock_params_height(&deps.api, &owner, 450, 550);
         let transfer_result = handle(&mut deps, params3, approve_msg2).unwrap();
@@ -814,15 +735,15 @@ mod transfer_from {
             initial_balances: vec![
                 InitialBalance {
                     address: HumanAddr("addr0000".to_string()),
-                    amount: "11".to_string(),
+                    amount: Amount::from("11"),
                 },
                 InitialBalance {
                     address: HumanAddr("addr1111".to_string()),
-                    amount: "22".to_string(),
+                    amount: Amount::from("22"),
                 },
                 InitialBalance {
                     address: HumanAddr("addrbbbb".to_string()),
-                    amount: "33".to_string(),
+                    amount: Amount::from("33"),
                 },
             ],
         }
@@ -847,7 +768,7 @@ mod transfer_from {
         // Set approval
         let approve_msg = HandleMsg::Approve {
             spender: make_spender(),
-            amount: "4".to_string(),
+            amount: Amount::from("4"),
         };
         let params2 = mock_params_height(&deps.api, &owner, 450, 550);
         let approve_result = handle(&mut deps, params2, approve_msg).unwrap();
@@ -861,7 +782,7 @@ mod transfer_from {
         let fransfer_from_msg = HandleMsg::TransferFrom {
             owner: owner.clone(),
             recipient: recipient.clone(),
-            amount: "3".to_string(),
+            amount: Amount::from("3"),
         };
         let params3 = mock_params_height(&deps.api, spender, 450, 550);
         let transfer_result = handle(&mut deps, params3, fransfer_from_msg).unwrap();
@@ -891,7 +812,7 @@ mod transfer_from {
         // Set approval
         let approve_msg = HandleMsg::Approve {
             spender: make_spender(),
-            amount: "2".to_string(),
+            amount: Amount::from("2"),
         };
         let params2 = mock_params_height(&deps.api, &owner, 450, 550);
         let approve_result = handle(&mut deps, params2, approve_msg).unwrap();
@@ -905,7 +826,7 @@ mod transfer_from {
         let fransfer_from_msg = HandleMsg::TransferFrom {
             owner: owner.clone(),
             recipient: recipient.clone(),
-            amount: "3".to_string(),
+            amount: Amount::from("3"),
         };
         let params3 = mock_params_height(&deps.api, spender, 450, 550);
         let transfer_result = handle(&mut deps, params3, fransfer_from_msg);
@@ -933,7 +854,7 @@ mod transfer_from {
         // Set approval
         let approve_msg = HandleMsg::Approve {
             spender: make_spender(),
-            amount: "20".to_string(),
+            amount: Amount::from("20"),
         };
         let params2 = mock_params_height(&deps.api, &owner, 450, 550);
         let approve_result = handle(&mut deps, params2, approve_msg).unwrap();
@@ -947,7 +868,7 @@ mod transfer_from {
         let fransfer_from_msg = HandleMsg::TransferFrom {
             owner: owner.clone(),
             recipient: recipient.clone(),
-            amount: "15".to_string(),
+            amount: Amount::from("15"),
         };
         let params3 = mock_params_height(&deps.api, spender, 450, 550);
         let transfer_result = handle(&mut deps, params3, fransfer_from_msg);
@@ -983,15 +904,15 @@ mod query {
             initial_balances: vec![
                 InitialBalance {
                     address: address(1),
-                    amount: "11".to_string(),
+                    amount: Amount::from("11"),
                 },
                 InitialBalance {
                     address: address(2),
-                    amount: "22".to_string(),
+                    amount: Amount::from("22"),
                 },
                 InitialBalance {
                     address: address(3),
-                    amount: "33".to_string(),
+                    amount: Amount::from("33"),
                 },
             ],
         }
@@ -1040,7 +961,7 @@ mod query {
 
         let approve_msg = HandleMsg::Approve {
             spender: spender.clone(),
-            amount: "42".to_string(),
+            amount: Amount::from("42"),
         };
         let params2 = mock_params_height(&deps.api, &owner, 450, 550);
         let transfer_result = handle(&mut deps, params2, approve_msg).unwrap();
@@ -1069,7 +990,7 @@ mod query {
 
         let approve_msg = HandleMsg::Approve {
             spender: spender.clone(),
-            amount: "42".to_string(),
+            amount: Amount::from("42"),
         };
         let params2 = mock_params_height(&deps.api, &owner, 450, 550);
         let transfer_result = handle(&mut deps, params2, approve_msg).unwrap();

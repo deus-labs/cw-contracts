@@ -5,10 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm::types::HumanAddr;
 
+use crate::state::Amount;
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct InitialBalance {
     pub address: HumanAddr,
-    pub amount: String,
+    pub amount: Amount,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -24,16 +26,16 @@ pub struct InitMsg {
 pub enum HandleMsg {
     Approve {
         spender: HumanAddr,
-        amount: String,
+        amount: Amount,
     },
     Transfer {
         recipient: HumanAddr,
-        amount: String,
+        amount: Amount,
     },
     TransferFrom {
         owner: HumanAddr,
         recipient: HumanAddr,
-        amount: String,
+        amount: Amount,
     },
 }
 
@@ -51,10 +53,10 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, NamedType)]
 pub struct BalanceResponse {
-    pub balance: String,
+    pub balance: Amount,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, NamedType)]
 pub struct AllowanceResponse {
-    pub allowance: String,
+    pub allowance: Amount,
 }

@@ -8,7 +8,8 @@ use cw_storage::ReadonlyPrefixedStorage;
 use cw_erc20::contract::{bytes_to_u128, read_u128};
 use cw_erc20::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
 use cw_erc20::state::{
-    Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
+    Amount, Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES,
+    PREFIX_CONFIG,
 };
 
 static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/cw_erc20.wasm");
@@ -80,15 +81,15 @@ fn init_msg() -> InitMsg {
         initial_balances: [
             InitialBalance {
                 address: address(1),
-                amount: "11".to_string(),
+                amount: Amount::from("11"),
             },
             InitialBalance {
                 address: address(2),
-                amount: "22".to_string(),
+                amount: Amount::from("22"),
             },
             InitialBalance {
                 address: address(3),
-                amount: "33".to_string(),
+                amount: Amount::from("33"),
             },
         ]
         .to_vec(),
@@ -140,7 +141,7 @@ fn transfer_works() {
     // Transfer
     let transfer_msg = HandleMsg::Transfer {
         recipient: recipient.clone(),
-        amount: "1".to_string(),
+        amount: Amount::from("1"),
     };
     let params2 = mock_params_height(&deps.api, &sender, 877, 0);
     let transfer_result = handle(&mut deps, params2, transfer_msg).unwrap();
@@ -173,7 +174,7 @@ fn approve_works() {
     // Approve
     let approve_msg = HandleMsg::Approve {
         spender: spender.clone(),
-        amount: "42".to_string(),
+        amount: Amount::from("42"),
     };
     let params2 = mock_params_height(&deps.api, &owner, 877, 0);
     let approve_result = handle(&mut deps, params2, approve_msg).unwrap();
@@ -208,7 +209,7 @@ fn transfer_from_works() {
     // Approve
     let approve_msg = HandleMsg::Approve {
         spender: spender.clone(),
-        amount: "42".to_string(),
+        amount: Amount::from("42"),
     };
     let params2 = mock_params_height(&deps.api, &owner, 877, 0);
     let approve_result = handle(&mut deps, params2, approve_msg).unwrap();
@@ -219,7 +220,7 @@ fn transfer_from_works() {
     let transfer_from_msg = HandleMsg::TransferFrom {
         owner: owner.clone(),
         recipient: recipient.clone(),
-        amount: "2".to_string(),
+        amount: Amount::from("2"),
     };
     let params3 = mock_params_height(&deps.api, &spender, 878, 0);
     let transfer_from_result = handle(&mut deps, params3, transfer_from_msg).unwrap();

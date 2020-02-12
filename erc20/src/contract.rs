@@ -1,7 +1,3 @@
-use named_type::NamedType;
-use named_type_derive::NamedType;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
 use cosmwasm::errors::{contract_err, dyn_contract_err, Result};
@@ -9,73 +5,10 @@ use cosmwasm::traits::{Api, Extern, ReadonlyStorage, Storage};
 use cosmwasm::types::{CanonicalAddr, HumanAddr, Params, Response};
 use cw_storage::{serialize, PrefixedStorage, ReadonlyPrefixedStorage};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
-pub struct InitialBalance {
-    pub address: HumanAddr,
-    pub amount: String,
-}
-
-#[derive(Serialize, Deserialize, JsonSchema)]
-pub struct InitMsg {
-    pub name: String,
-    pub symbol: String,
-    pub decimals: u8,
-    pub initial_balances: Vec<InitialBalance>,
-}
-
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum HandleMsg {
-    Approve {
-        spender: HumanAddr,
-        amount: String,
-    },
-    Transfer {
-        recipient: HumanAddr,
-        amount: String,
-    },
-    TransferFrom {
-        owner: HumanAddr,
-        recipient: HumanAddr,
-        amount: String,
-    },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum QueryMsg {
-    Balance {
-        address: HumanAddr,
-    },
-    Allowance {
-        owner: HumanAddr,
-        spender: HumanAddr,
-    },
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, NamedType)]
-pub struct BalanceResponse {
-    pub balance: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, NamedType)]
-pub struct AllowanceResponse {
-    pub allowance: String,
-}
-
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, JsonSchema, NamedType)]
-pub struct Constants {
-    pub name: String,
-    pub symbol: String,
-    pub decimals: u8,
-}
-
-pub const PREFIX_CONFIG: &[u8] = b"config";
-pub const PREFIX_BALANCES: &[u8] = b"balances";
-pub const PREFIX_ALLOWANCES: &[u8] = b"allowances";
-
-pub const KEY_CONSTANTS: &[u8] = b"constants";
-pub const KEY_TOTAL_SUPPLY: &[u8] = b"total_supply";
+use crate::msg::{AllowanceResponse, BalanceResponse, HandleMsg, InitMsg, QueryMsg};
+use crate::state::{
+    Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
+};
 
 pub fn init<S: Storage, A: Api>(
     deps: &mut Extern<S, A>,

@@ -5,9 +5,10 @@ use cosmwasm::types::{HumanAddr, Params};
 use cosmwasm_vm::testing::{handle, init, mock_instance, query};
 use cw_storage::ReadonlyPrefixedStorage;
 
-use cw_erc20::contract::{
-    bytes_to_u128, read_u128, Constants, HandleMsg, InitMsg, InitialBalance, QueryMsg,
-    KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
+use cw_erc20::contract::{bytes_to_u128, read_u128};
+use cw_erc20::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
+use cw_erc20::state::{
+    Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
 };
 
 static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/cw_erc20.wasm");

@@ -4,9 +4,8 @@ use std::path::PathBuf;
 
 use schemars::{schema::RootSchema, schema_for};
 
-use cw_erc20::contract::{
-    AllowanceResponse, BalanceResponse, Constants, HandleMsg, InitMsg, QueryMsg,
-};
+use cw_erc20::msg::{AllowanceResponse, BalanceResponse, HandleMsg, InitMsg, QueryMsg};
+use cw_erc20::state::Constants;
 
 fn main() {
     let mut pwd = current_dir().unwrap();

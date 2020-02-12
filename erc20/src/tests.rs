@@ -5,9 +5,10 @@ use cosmwasm::traits::{Api, ReadonlyStorage, Storage};
 use cosmwasm::types::{HumanAddr, Params};
 use cw_storage::ReadonlyPrefixedStorage;
 
-use crate::contract::{
-    bytes_to_u128, handle, init, query, read_u128, Constants, HandleMsg, InitMsg, InitialBalance,
-    QueryMsg, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
+use crate::contract::{bytes_to_u128, handle, init, query, read_u128};
+use crate::msg::{HandleMsg, InitMsg, InitialBalance, QueryMsg};
+use crate::state::{
+    Constants, KEY_CONSTANTS, KEY_TOTAL_SUPPLY, PREFIX_ALLOWANCES, PREFIX_BALANCES, PREFIX_CONFIG,
 };
 
 static CANONICAL_LENGTH: usize = 20;

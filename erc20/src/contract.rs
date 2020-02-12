@@ -1,4 +1,4 @@
-use cosmwasm::errors::{contract_err, Result};
+use cosmwasm::errors::Result;
 use cosmwasm::traits::{Api, Extern, Storage};
 use cosmwasm::types::{CanonicalAddr, HumanAddr, Params, Response};
 use cw_storage::serialize;
@@ -14,27 +14,13 @@ pub fn init<S: Storage, A: Api>(
     _params: Params,
     msg: InitMsg,
 ) -> Result<Response> {
-    let mut total: u128 = 0;
-    {
-        // Initial balances
-        let mut balances_store = balances(&mut deps.storage);
-        for row in msg.initial_balances {
-            let raw_address = deps.api.canonical_address(&row.address)?;
-            let amount_raw = row.amount.parse()?;
-            balances_store.save(raw_address.as_bytes(), &row.amount)?;
-            total += amount_raw;
-        }
-    }
+    // ensure the InitMsg is valid, and get the total amount while we are at it
+    let total = msg.valid_total()?;
 
-    // Check name, symbol, decimals
-    if !is_valid_name(&msg.name) {
-        return contract_err("Name is not in the expected format (3-30 UTF-8 bytes)");
-    }
-    if !is_valid_symbol(&msg.symbol) {
-        return contract_err("Ticker symbol is not in expected format [A-Z]{3,6}");
-    }
-    if msg.decimals > 18 {
-        return contract_err("Decimals must not exceed 18");
+    let mut balances_store = balances(&mut deps.storage);
+    for row in msg.initial_balances {
+        let raw_address = deps.api.canonical_address(&row.address)?;
+        balances_store.save(raw_address.as_bytes(), &row.amount)?;
     }
 
     constants(&mut deps.storage).save(&Constants {
@@ -51,6 +37,7 @@ pub fn handle<S: Storage, A: Api>(
     params: Params,
     msg: HandleMsg,
 ) -> Result<Response> {
+    msg.validate()?;
     match msg {
         HandleMsg::Approve { spender, amount } => try_approve(deps, params, &spender, &amount),
         HandleMsg::Transfer { recipient, amount } => {
@@ -159,27 +146,4 @@ fn response_with_log(msg: &str) -> Response {
         log: Some(msg.to_string()),
         data: None,
     }
-}
-
-fn is_valid_name(name: &str) -> bool {
-    let bytes = name.as_bytes();
-    if bytes.len() < 3 || bytes.len() > 30 {
-        return false;
-    }
-    return true;
-}
-
-fn is_valid_symbol(symbol: &str) -> bool {
-    let bytes = symbol.as_bytes();
-    if bytes.len() < 3 || bytes.len() > 6 {
-        return false;
-    }
-
-    for byte in bytes.iter() {
-        if *byte < 65 || *byte > 90 {
-            return false;
-        }
-    }
-
-    return true;
 }

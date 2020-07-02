@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HandleMsg",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "sell_domain"
+      ],
+      "properties": {
+        "sell_domain": {
+          "type": "object",
+          "required": [
+            "buyer",
+            "domain"
+          ],
+          "properties": {
+            "buyer": {
+              "$ref": "#/definitions/HumanAddr"
+            },
+            "domain": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "register_domain"
+      ],
+      "properties": {
+        "register_domain": {
+          "type": "object",
+          "required": [
+            "domain"
+          ],
+          "properties": {
+            "domain": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "HumanAddr": {
+      "type": "string"
+    }
+  }
+}

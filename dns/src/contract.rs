@@ -163,8 +163,8 @@ mod tests {
     fn proper_initialization() {
         let mut deps = mock_dependencies(20, &[]);
 
-        let msg = InitMsg { erc20: HumanAddr("okchain123".to_string())};
-        let env = mock_env(&deps.api, "account1", &coins(1000, "okt"));
+        let msg = InitMsg { erc20: HumanAddr("cosmos123".to_string())};
+        let env = mock_env(&deps.api, "account1", &coins(1000, "eth"));
 
         // we can just call .unwrap() to assert this was a success
         let res = init(&mut deps, env, msg).unwrap();
@@ -173,22 +173,22 @@ mod tests {
 
     #[test]
     fn register_domain() {
-        let mut deps = mock_dependencies(20, &coins(2, "okt"));
+        let mut deps = mock_dependencies(20, &coins(2, "eth"));
 
-        let msg = InitMsg { erc20: HumanAddr("okchain123".to_string())};
-        let env = mock_env(&deps.api, "account1", &coins(2, "okt"));
+        let msg = InitMsg { erc20: HumanAddr("cosmos123".to_string())};
+        let env = mock_env(&deps.api, "account1", &coins(2, "eth"));
 
         let res = init(&mut deps, env, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
         // register domain
-        let env = mock_env(&deps.api, "account1", &coins(2, "okt"));
-        let msg = HandleMsg::RegisterDomain {domain: "www.okchain.com".to_string() };
+        let env = mock_env(&deps.api, "account1", &coins(2, "eth"));
+        let msg = HandleMsg::RegisterDomain {domain: "www.cosmos.com".to_string() };
         let res = handle(&mut deps, env, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
         // query domain
-        let res = query(&deps, QueryMsg::GetOwner { domain: "www.okchain.com".to_string() }).unwrap();
+        let res = query(&deps, QueryMsg::GetOwner { domain: "www.cosmos.com".to_string() }).unwrap();
         let value: GetOwnerResponse = from_binary(&res).unwrap();
         assert_ne!(HumanAddr("account2".to_string()), value.owner);
         assert_eq!(HumanAddr("account1".to_string()), value.owner);

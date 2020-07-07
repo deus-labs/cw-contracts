@@ -116,7 +116,7 @@ pub fn handler_resp(res:HandleResponse, caller: HumanAddr) -> StdResult<HandleRe
                 match wasm_msg{
                     WasmMsg::Execute{ contract_addr, msg, send } => {
                         let mut handler_deps= instantiate(contract_addr.clone());
-                        let env = mock_env_addr(&handler_deps.api, &caller, &contract_addr, &coins(100, "okt"));
+                        let env = mock_env_addr(&handler_deps.api, &caller, &contract_addr, &coins(100, "eth"));
                         let res = call_handle(&mut handler_deps, &env, msg.as_slice()).unwrap().unwrap();
 
                         if res.messages.len() > 0 {
@@ -141,7 +141,7 @@ pub fn generate_address() -> HumanAddr{
         .take(12)
         .collect();
 
-    let mut address_prefix = "okchain".to_string();
+    let mut address_prefix = "cosmos".to_string();
     address_prefix += &rand_string.to_lowercase();
 
     HumanAddr(address_prefix)

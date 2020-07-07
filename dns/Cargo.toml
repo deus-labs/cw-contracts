@@ -1,7 +1,7 @@
 [package]
 name = "dns"
 version = "0.1.0"
-authors = ["liuxiong <xiong.liu@okcoin.net>"]
+authors = ["louisliu <louisliu512@163.com>"]
 edition = "2018"
 
 exclude = [

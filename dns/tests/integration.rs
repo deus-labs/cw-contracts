@@ -35,10 +35,10 @@ use crate::erc20msg::{ERC20AllowanceResponse, ERC20InitMsg, InitialBalance, ERC2
 
 fn user_address(index: u8) -> HumanAddr {
     match index {
-        0 => HumanAddr("okchain0000u".to_string()), // contract initializer
-        1 => HumanAddr("okchain1111u".to_string()),
-        2 => HumanAddr("okchain2222u".to_string()),
-        3 => HumanAddr("okchain3333u".to_string()),
+        0 => HumanAddr("cosmos0000u".to_string()), // contract initializer
+        1 => HumanAddr("cosmos1111u".to_string()),
+        2 => HumanAddr("cosmos2222u".to_string()),
+        3 => HumanAddr("cosmos3333u".to_string()),
         _ => panic!("Unsupported address index"),
     }
 }
@@ -46,8 +46,8 @@ fn user_address(index: u8) -> HumanAddr {
 fn init_msg() -> ERC20InitMsg {
     ERC20InitMsg {
         decimals: 5,
-        name: "Ok chain token".to_string(),
-        symbol: "OKT".to_string(),
+        name: "Wasm token".to_string(),
+        symbol: "ETH".to_string(),
         initial_balances: [
             InitialBalance {
                 address: user_address(0),
@@ -97,20 +97,20 @@ fn sell_domain() {
 
 
     // register domain
-    let env = mock_env_addr(&dns_deps.api, &user_address(2), &dns_contract_address.clone(), &coins(100, "okt"));
-    let msg = HandleMsg::RegisterDomain {domain: "www.okchain.com".to_string() };
+    let env = mock_env_addr(&dns_deps.api, &user_address(2), &dns_contract_address.clone(), &coins(100, "eth"));
+    let msg = HandleMsg::RegisterDomain {domain: "www.cosmos.com".to_string() };
     let res: HandleResponse = handle(&mut dns_deps, env, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
 
     // query domain
-    let res: QueryResponse = query(&mut dns_deps, QueryMsg::GetOwner { domain: "www.okchain.com".to_string() }).unwrap();
+    let res: QueryResponse = query(&mut dns_deps, QueryMsg::GetOwner { domain: "www.cosmos.com".to_string() }).unwrap();
     let value: GetOwnerResponse = from_binary(&res).unwrap();
     assert_eq!(user_address(2), value.owner);
 
 
     // approve allowance for dns contract to move token to domain raw owner
-    let env = mock_env_addr(&erc20deps.api, &user_address(3), &erc20_contract_address.clone(), &coins(100, "okt"));
+    let env = mock_env_addr(&erc20deps.api, &user_address(3), &erc20_contract_address.clone(), &coins(100, "eth"));
     let msg = Erc20HandleMsg::Approve {
         spender: dns_contract_address.clone(),
         amount:  Uint128::from(500u128),
@@ -126,8 +126,8 @@ fn sell_domain() {
 
 
     // sell domain: cross-contract query and invoke!
-    let env = mock_env_addr(&dns_deps.api, &user_address(2), &dns_contract_address.clone(), &coins(100, "okt"));
-    let msg = HandleMsg::SellDomain { buyer: user_address(3), domain: "www.okchain.com".to_string() };
+    let env = mock_env_addr(&dns_deps.api, &user_address(2), &dns_contract_address.clone(), &coins(100, "eth"));
+    let msg = HandleMsg::SellDomain { buyer: user_address(3), domain: "www.cosmos.com".to_string() };
     let res:HandleResponse = handle(&mut dns_deps, env, msg).unwrap();
     assert_eq!(1, res.messages.len());
     let res:HandleResponse = handler_resp(res, dns_contract_address.clone()).unwrap();
@@ -135,7 +135,7 @@ fn sell_domain() {
 
 
     // query domain
-    let res = query(&mut dns_deps, QueryMsg::GetOwner { domain: "www.okchain.com".to_string() }).unwrap();
+    let res = query(&mut dns_deps, QueryMsg::GetOwner { domain: "www.cosmos.com".to_string() }).unwrap();
     let value: GetOwnerResponse = from_binary(&res).unwrap();
     assert_eq!(user_address(3), value.owner);
 }

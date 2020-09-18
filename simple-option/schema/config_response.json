@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConfigResponse",
+  "type": "object",
+  "required": [
+    "collateral",
+    "counter_offer",
+    "creator",
+    "expires",
+    "owner"
+  ],
+  "properties": {
+    "collateral": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Coin"
+      }
+    },
+    "counter_offer": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Coin"
+      }
+    },
+    "creator": {
+      "$ref": "#/definitions/HumanAddr"
+    },
+    "expires": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "owner": {
+      "$ref": "#/definitions/HumanAddr"
+    }
+  },
+  "definitions": {
+    "Coin": {
+      "type": "object",
+      "required": [
+        "amount",
+        "denom"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "denom": {
+          "type": "string"
+        }
+      }
+    },
+    "HumanAddr": {
+      "type": "string"
+    },
+    "Uint128": {
+      "type": "string"
+    }
+  }
+}

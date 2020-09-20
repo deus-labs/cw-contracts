@@ -34,7 +34,7 @@ containing a simple working contract and build system that you can customize.
 
 Once you have your custom repo, you should check out [Developing](./Developing.md) to explain
 more on how to run tests and develop code. Or go through the
-[online tutorial](https://www.cosmwasm.com/docs/getting-started/intro.html) to get a better feel
+[online tutorial](https://docs.cosmwasm.com/introduction/intro.html) to get a better feel
 of how to develop.
 
 [Publishing](./Publishing.md) contains useful information on how to publish your contract

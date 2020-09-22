@@ -3,6 +3,7 @@ workflows:
   version: 2
   test:
     jobs:
+      - simple-option
       - erc20
       - escrow
       - nameservice

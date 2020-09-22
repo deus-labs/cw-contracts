@@ -124,7 +124,7 @@ pub fn handle_burn<S: Storage, A: Api, Q: Querier>(
     // release collateral to creator
     let mut res = Context::new();
     res.add_message(BankMsg::Send {
-        from_address: env.contract.address.clone(),
+        from_address: env.contract.address,
         to_address: state.creator,
         amount: state.collateral,
     });

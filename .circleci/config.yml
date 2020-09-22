@@ -28,15 +28,21 @@ jobs:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
       - run:
-          name: Build
+          name: Add components to Rust toolchain
+          command: rustup component add rustfmt clippy
+      - run:
+          name: Build Wasm
           command: cargo wasm --locked
       - run:
-          name: Unit tests
+          name: Unit Tests
           env: RUST_BACKTRACE=1
           command: cargo unit-test --locked
       - run:
-          name: Format source code
-          command: cargo fmt
+          name: Check formatting
+          command: cargo fmt -- --check
+      - run:
+          name: Lint
+          command: cargo clippy -- -D warnings
       - run:
           name: Build and run schema generator
           command: cargo schema --locked
@@ -52,12 +58,7 @@ jobs:
       - save_cache:
           paths:
             - /usr/local/cargo/registry
-            - target/debug/.fingerprint
-            - target/debug/build
-            - target/debug/deps
-            - target/wasm32-unknown-unknown/release/.fingerprint
-            - target/wasm32-unknown-unknown/release/build
-            - target/wasm32-unknown-unknown/release/deps
+            - target
           key: cargocache-simple-option-rust:1.44.1-{{ checksum "Cargo.lock" }}
   erc20:
     docker:

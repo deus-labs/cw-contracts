@@ -23,7 +23,7 @@ impl State {
         }
 
         if let Some(end_time) = self.end_time {
-            if env.block.time > end_time {
+            if env.block.time.nanos() > end_time {
                 return true;
             }
         }

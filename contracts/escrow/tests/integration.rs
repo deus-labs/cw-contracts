@@ -25,7 +25,7 @@ use cosmwasm_vm::testing::{init, mock_info, mock_instance};
 use cosmwasm_vm::{from_slice, Api, Storage};
 
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cw_escrow::msg::InitMsg;
+use cw_escrow::msg::InstantiateMsg;
 use cw_escrow::state::State;
 
 // This line will test the output of cargo wasm
@@ -33,8 +33,8 @@ static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/cw
 // You can uncomment this line instead to test productionified build from rust-optimizer
 // static WASM: &[u8] = include_bytes!("../contract.wasm");
 
-fn init_msg_expire_by_height(height: u64) -> InitMsg {
-    InitMsg {
+fn init_msg_expire_by_height(height: u64) -> InstantiateMsg {
+    InstantiateMsg {
         arbiter: HumanAddr::from("verifies"),
         recipient: HumanAddr::from("benefits"),
         end_height: Some(height),

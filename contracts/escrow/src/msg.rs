@@ -1,11 +1,11 @@
-use cosmwasm_std::{Coin, HumanAddr};
+use cosmwasm_std::{Addr, Coin};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
-    pub arbiter: HumanAddr,
-    pub recipient: HumanAddr,
+pub struct InstantiateMsg {
+    pub arbiter: Addr,
+    pub recipient: Addr,
     /// When end height set and block height exceeds this value, the escrow is expired.
     /// Once an escrow is expired, it can be returned to the original funder (via "refund").
     pub end_height: Option<u64>,
@@ -17,7 +17,7 @@ pub struct InitMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     Approve {
         // release some coins - if quantity is None, release all coins in balance
         quantity: Option<Vec<Coin>>,
@@ -34,5 +34,5 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ArbiterResponse {
-    pub arbiter: HumanAddr,
+    pub arbiter: Addr,
 }

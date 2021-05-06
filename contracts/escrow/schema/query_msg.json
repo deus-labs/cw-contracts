@@ -12,7 +12,8 @@
         "arbiter": {
           "type": "object"
         }
-      }
+      },
+      "additionalProperties": false
     }
   ]
 }

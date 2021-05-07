@@ -17,12 +17,10 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_std::{
-    coins, BlockInfo, Coin, ContractInfo, Env, HumanAddr, InitResponse, MessageInfo,
-};
+use cosmwasm_std::{coins, BlockInfo, Coin, ContractInfo, Env, MessageInfo, Timestamp, Addr, Response};
 use cosmwasm_storage::to_length_prefixed;
-use cosmwasm_vm::testing::{init, mock_info, mock_instance};
-use cosmwasm_vm::{from_slice, Api, Storage};
+use cosmwasm_vm::testing::{instantiate, mock_info, mock_instance};
+use cosmwasm_vm::{from_slice, Storage};
 
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use cw_escrow::msg::InstantiateMsg;
@@ -35,8 +33,8 @@ static WASM: &[u8] = include_bytes!("../target/wasm32-unknown-unknown/release/cw
 
 fn init_msg_expire_by_height(height: u64) -> InstantiateMsg {
     InstantiateMsg {
-        arbiter: HumanAddr::from("verifies"),
-        recipient: HumanAddr::from("benefits"),
+        arbiter: String::from("verifies"),
+        recipient: String::from("benefits"),
         end_height: Some(height),
         end_time: None,
     }
@@ -46,11 +44,11 @@ fn mock_env_info_height(signer: &str, sent: &[Coin], height: u64, time: u64) -> 
     let env = Env {
         block: BlockInfo {
             height,
-            time,
-            ..Default::default()
+            time: Timestamp::from_nanos(time),
+            chain_id: String::from("test"),
         },
         contract: ContractInfo {
-            address: HumanAddr::from(MOCK_CONTRACT_ADDR),
+            address: Addr::unchecked(MOCK_CONTRACT_ADDR),
         },
     };
     let info = mock_info(signer, sent);
@@ -63,29 +61,19 @@ fn proper_initialization() {
 
     let msg = init_msg_expire_by_height(1000);
     let (env, info) = mock_env_info_height("creator", &coins(1000, "earth"), 876, 0);
-    let res: InitResponse = init(&mut deps, env, info, msg).unwrap();
+    let res: Response = instantiate(&mut deps, env, info, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
     // it worked, let's query the state
-    let api = deps.api().clone();
     deps.with_storage(|store| {
         let config_key_raw = to_length_prefixed(b"config");
         let state: State = from_slice(&store.get(&config_key_raw).0.unwrap().unwrap()).unwrap();
         assert_eq!(
             state,
             State {
-                arbiter: api
-                    .canonical_address(&HumanAddr::from("verifies"))
-                    .0
-                    .unwrap(),
-                recipient: api
-                    .canonical_address(&HumanAddr::from("benefits"))
-                    .0
-                    .unwrap(),
-                source: api
-                    .canonical_address(&HumanAddr::from("creator"))
-                    .0
-                    .unwrap(),
+                arbiter: Addr::unchecked("verifies"),
+                recipient: Addr::unchecked("benefits"),
+                source: Addr::unchecked("creator"),
                 end_height: Some(1000),
                 end_time: None,
             }

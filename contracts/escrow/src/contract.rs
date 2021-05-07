@@ -74,7 +74,7 @@ fn try_approve(
         deps.querier.query_all_balances(&env.contract.address)?
     };
 
-    send_tokens(state.recipient, amount, "approve")
+    Ok(send_tokens(state.recipient, amount, "approve"))
 }
 
 fn try_refund(
@@ -91,18 +91,14 @@ fn try_refund(
     // Querier guarantees to returns up-to-date data, including funds sent in this handle message
     // https://github.com/CosmWasm/wasmd/blob/master/x/wasm/internal/keeper/keeper.go#L185-L192
     let balance = deps.querier.query_all_balances(&env.contract.address)?;
-    send_tokens(state.source, balance, "refund")
+    Ok(send_tokens(state.source, balance, "refund"))
 }
 
 // this is a helper to move the tokens, so the business logic is easy to read
-fn send_tokens(
-    to_address: Addr,
-    amount: Vec<Coin>,
-    action: &str,
-) -> Result<Response, ContractError> {
+fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
     let attributes = vec![attr("action", action), attr("to", to_address.clone())];
 
-    let r = Response {
+    Response {
         submessages: vec![],
         messages: vec![CosmosMsg::Bank(BankMsg::Send {
             to_address: to_address.into(),
@@ -110,8 +106,7 @@ fn send_tokens(
         })],
         data: None,
         attributes,
-    };
-    Ok(r)
+    }
 }
 
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {

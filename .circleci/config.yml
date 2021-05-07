@@ -121,7 +121,7 @@ jobs:
           key: cargocache-erc20-rust:1.47.0-{{ checksum "Cargo.lock" }}
   escrow:
     docker:
-      - image: rust:1.47.0
+      - image: rust:1.51.0
     working_directory: ~/project/contracts/escrow
     steps:
       - checkout:

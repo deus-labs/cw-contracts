@@ -14,9 +14,9 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     let state = State {
-        arbiter: deps.api.addr_canonicalize(&msg.arbiter.as_str())?,
-        recipient: deps.api.addr_canonicalize(&msg.recipient.as_str())?,
-        source: deps.api.addr_canonicalize(&info.sender.as_str())?,
+        arbiter: deps.api.addr_validate(&msg.arbiter)?,
+        recipient: deps.api.addr_validate(&msg.recipient)?,
+        source: info.sender,
         end_height: msg.end_height,
         end_time: msg.end_time,
     };
@@ -52,7 +52,7 @@ fn try_approve(
     info: MessageInfo,
     quantity: Option<Vec<Coin>>,
 ) -> Result<Response, ContractError> {
-    if deps.api.addr_canonicalize(&info.sender.as_str())? != state.arbiter {
+    if info.sender != state.arbiter {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -74,7 +74,7 @@ fn try_approve(
         deps.querier.query_all_balances(&env.contract.address)?
     };
 
-    send_tokens(deps.api.addr_humanize(&state.recipient)?, amount, "approve")
+    send_tokens(state.recipient, amount, "approve")
 }
 
 fn try_refund(
@@ -91,7 +91,7 @@ fn try_refund(
     // Querier guarantees to returns up-to-date data, including funds sent in this handle message
     // https://github.com/CosmWasm/wasmd/blob/master/x/wasm/internal/keeper/keeper.go#L185-L192
     let balance = deps.querier.query_all_balances(&env.contract.address)?;
-    send_tokens(deps.api.addr_humanize(&state.source)?, balance, "refund")
+    send_tokens(state.source, balance, "refund")
 }
 
 // this is a helper to move the tokens, so the business logic is easy to read
@@ -122,7 +122,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 fn query_arbiter(deps: Deps) -> StdResult<ArbiterResponse> {
     let state = config_read(deps.storage).load()?;
-    let addr = deps.api.addr_humanize(&state.arbiter)?;
+    let addr = state.arbiter;
     Ok(ArbiterResponse { arbiter: addr })
 }
 
@@ -130,12 +130,12 @@ fn query_arbiter(deps: Deps) -> StdResult<ArbiterResponse> {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, Api, Timestamp};
+    use cosmwasm_std::{coins, Timestamp};
 
     fn init_msg_expire_by_height(height: u64) -> InstantiateMsg {
         InstantiateMsg {
-            arbiter: Addr::unchecked("verifies"),
-            recipient: Addr::unchecked("benefits"),
+            arbiter: String::from("verifies"),
+            recipient: String::from("benefits"),
             end_height: Some(height),
             end_time: None,
         }
@@ -159,9 +159,9 @@ mod tests {
         assert_eq!(
             state,
             State {
-                arbiter: deps.api.addr_canonicalize("verifies").unwrap(),
-                recipient: deps.api.addr_canonicalize("benefits").unwrap(),
-                source: deps.api.addr_canonicalize("creator").unwrap(),
+                arbiter: Addr::unchecked("verifies"),
+                recipient: Addr::unchecked("benefits"),
+                source: Addr::unchecked("creator"),
                 end_height: Some(1000),
                 end_time: None,
             }
@@ -193,8 +193,8 @@ mod tests {
         let recipient = Addr::unchecked("receives");
         let creator = Addr::unchecked("creates");
         let msg = InstantiateMsg {
-            arbiter: arbiter.clone(),
-            recipient,
+            arbiter: arbiter.clone().into(),
+            recipient: recipient.into(),
             end_height: None,
             end_time: None,
         };

@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub arbiter: Addr,
-    pub recipient: Addr,
+    pub arbiter: String,
+    pub recipient: String,
     /// When end height set and block height exceeds this value, the escrow is expired.
     /// Once an escrow is expired, it can be returned to the original funder (via "refund").
     pub end_height: Option<u64>,

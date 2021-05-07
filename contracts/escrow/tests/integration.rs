@@ -17,7 +17,9 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_std::{coins, BlockInfo, Coin, ContractInfo, Env, MessageInfo, Timestamp, Addr, Response};
+use cosmwasm_std::{
+    coins, Addr, BlockInfo, Coin, ContractInfo, Env, MessageInfo, Response, Timestamp,
+};
 use cosmwasm_storage::to_length_prefixed;
 use cosmwasm_vm::testing::{instantiate, mock_info, mock_instance};
 use cosmwasm_vm::{from_slice, Storage};

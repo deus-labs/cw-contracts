@@ -173,7 +173,7 @@ jobs:
           key: cargocache-escrow-rust:1.47.0-{{ checksum "Cargo.lock" }}
   nameservice:
     docker:
-      - image: rust:1.47.0
+      - image: rust:1.51.0
     working_directory: ~/project/contracts/nameservice
     steps:
       - checkout:
@@ -183,7 +183,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-nameservice-rust:1.47.0-{{ checksum "Cargo.lock" }}
+            - cargocache-nameservice-rust:1.51.0-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -222,7 +222,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-nameservice-rust:1.47.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-nameservice-rust:1.51.0-{{ checksum "Cargo.lock" }}
   voting:
     docker:
       - image: rust:1.47.0

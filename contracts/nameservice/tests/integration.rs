@@ -48,7 +48,7 @@ fn assert_name_owner(
     .unwrap();
 
     let value: ResolveRecordResponse = from_binary(&res).unwrap();
-    assert_eq!(Some(Addr::unchecked(owner)), value.address);
+    assert_eq!(Some(owner.to_string()), value.address);
 }
 
 fn mock_instantiate_with_price(

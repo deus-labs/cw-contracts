@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::Coin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -26,5 +26,5 @@ pub enum QueryMsg {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ResolveRecordResponse {
-    pub address: Option<Addr>,
+    pub address: Option<String>,
 }

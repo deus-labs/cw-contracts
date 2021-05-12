@@ -52,9 +52,7 @@ pub fn try_register(
     assert_sent_sufficient_coin(&info.funds, config_state.purchase_price)?;
 
     let key = name.as_bytes();
-    let record = NameRecord {
-        owner: deps.api.addr_canonicalize(&info.sender.as_str())?,
-    };
+    let record = NameRecord { owner: info.sender };
 
     if (resolver(deps.storage).may_load(key)?).is_some() {
         // name is already taken
@@ -74,15 +72,14 @@ pub fn try_transfer(
     name: String,
     to: String,
 ) -> Result<Response, ContractError> {
-    let api = deps.api;
     let config_state = config(deps.storage).load()?;
     assert_sent_sufficient_coin(&info.funds, config_state.transfer_price)?;
 
-    let new_owner = deps.api.addr_canonicalize(&to)?;
+    let new_owner = deps.api.addr_validate(&to)?;
     let key = name.as_bytes();
     resolver(deps.storage).update(key, |record| {
         if let Some(mut record) = record {
-            if api.addr_canonicalize(&info.sender.as_str())? != record.owner {
+            if info.sender != record.owner {
                 return Err(ContractError::Unauthorized {});
             }
 
@@ -107,7 +104,7 @@ fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
     let key = name.as_bytes();
 
     let address = match resolver_read(deps.storage).may_load(key)? {
-        Some(record) => Some(deps.api.addr_humanize(&record.owner)?),
+        Some(record) => Some(String::from(&record.owner)),
         None => None,
     };
     let resp = ResolveRecordResponse { address };
@@ -117,8 +114,7 @@ fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
 
 // let's not import a regexp library and just do these checks by hand
 fn invalid_char(c: char) -> bool {
-    let is_valid =
-        ('0'..='9').contains(&c) || ('a'..='z').contains(&c) || (c == '.' || c == '-' || c == '_');
+    let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '.' || c == '-' || c == '_');
     !is_valid
 }
 

@@ -62,7 +62,7 @@ fn mock_instantiate_with_price(
     };
 
     let params = mock_info("creator", &coins(2, "token"));
-    // unwrap: contract successfully executes InitMsg
+    // unwrap: contract successfully executes InstantiateMsg
     let _res: Response = instantiate(&mut deps, mock_env(), params, msg).unwrap();
 }
 
@@ -73,7 +73,7 @@ fn mock_instantiate_no_price(mut deps: &mut Instance<MockApi, MockStorage, MockQ
     };
 
     let params = mock_info("creator", &coins(2, "token"));
-    // unwrap: contract successfully executes InitMsg
+    // unwrap: contract successfully executes InstantiateMsg
     let _res: Response = instantiate(&mut deps, mock_env(), params, msg).unwrap();
 }
 

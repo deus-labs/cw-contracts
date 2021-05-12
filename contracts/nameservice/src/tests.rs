@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coin, coins, from_binary, Addr, Coin, Deps, DepsMut};
+    use cosmwasm_std::{coin, coins, from_binary, Coin, Deps, DepsMut};
 
     use crate::contract::{execute, instantiate, query};
     use crate::error::ContractError;
@@ -19,7 +19,7 @@ mod tests {
         .unwrap();
 
         let value: ResolveRecordResponse = from_binary(&res).unwrap();
-        assert_eq!(Some(Addr::unchecked(owner)), value.address);
+        assert_eq!(Some(owner.to_string()), value.address);
     }
 
     fn assert_config_state(deps: Deps, expected: Config) {
@@ -36,7 +36,7 @@ mod tests {
 
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps, mock_env(), info, msg)
-            .expect("contract successfully handles InitMsg");
+            .expect("contract successfully handles InstantiateMsg");
     }
 
     fn mock_init_no_price(deps: DepsMut) {
@@ -47,7 +47,7 @@ mod tests {
 
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps, mock_env(), info, msg)
-            .expect("contract successfully handles InitMsg");
+            .expect("contract successfully handles InstantiateMsg");
     }
 
     fn mock_alice_registers_name(deps: DepsMut, sent: &[Coin]) {

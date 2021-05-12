@@ -1,16 +1,16 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct InitialBalance {
-    pub address: HumanAddr,
+    pub address: Addr,
     pub amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
@@ -19,18 +19,18 @@ pub struct InitMsg {
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     Approve {
-        spender: HumanAddr,
+        spender: String,
         amount: Uint128,
     },
     Transfer {
-        recipient: HumanAddr,
+        recipient: String,
         amount: Uint128,
     },
     TransferFrom {
-        owner: HumanAddr,
-        recipient: HumanAddr,
+        owner: String,
+        recipient: String,
         amount: Uint128,
     },
     Burn {
@@ -41,13 +41,8 @@ pub enum HandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Balance {
-        address: HumanAddr,
-    },
-    Allowance {
-        owner: HumanAddr,
-        spender: HumanAddr,
-    },
+    Balance { address: String },
+    Allowance { owner: String, spender: String },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]

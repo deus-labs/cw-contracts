@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coin, coins, from_binary, Coin, Deps, DepsMut, HumanAddr};
+    use cosmwasm_std::{coin, coins, from_binary, Addr, Coin, Deps, DepsMut};
 
-    use crate::contract::{handle, init, query};
+    use crate::contract::{execute, instantiate, query};
     use crate::error::ContractError;
-    use crate::msg::{HandleMsg, InitMsg, QueryMsg, ResolveRecordResponse};
+    use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ResolveRecordResponse};
     use crate::state::Config;
 
     fn assert_name_owner(deps: Deps, name: &str, owner: &str) {
@@ -19,7 +19,7 @@ mod tests {
         .unwrap();
 
         let value: ResolveRecordResponse = from_binary(&res).unwrap();
-        assert_eq!(Some(HumanAddr::from(owner)), value.address);
+        assert_eq!(Some(Addr::unchecked(owner)), value.address);
     }
 
     fn assert_config_state(deps: Deps, expected: Config) {
@@ -29,34 +29,34 @@ mod tests {
     }
 
     fn mock_init_with_price(deps: DepsMut, purchase_price: Coin, transfer_price: Coin) {
-        let msg = InitMsg {
+        let msg = InstantiateMsg {
             purchase_price: Some(purchase_price),
             transfer_price: Some(transfer_price),
         };
 
         let info = mock_info("creator", &coins(2, "token"));
-        let _res =
-            init(deps, mock_env(), info, msg).expect("contract successfully handles InitMsg");
+        let _res = instantiate(deps, mock_env(), info, msg)
+            .expect("contract successfully handles InitMsg");
     }
 
     fn mock_init_no_price(deps: DepsMut) {
-        let msg = InitMsg {
+        let msg = InstantiateMsg {
             purchase_price: None,
             transfer_price: None,
         };
 
         let info = mock_info("creator", &coins(2, "token"));
-        let _res =
-            init(deps, mock_env(), info, msg).expect("contract successfully handles InitMsg");
+        let _res = instantiate(deps, mock_env(), info, msg)
+            .expect("contract successfully handles InitMsg");
     }
 
     fn mock_alice_registers_name(deps: DepsMut, sent: &[Coin]) {
         // alice can register an available name
         let info = mock_info("alice_key", sent);
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "alice".to_string(),
         };
-        let _res = handle(deps, mock_env(), info, msg)
+        let _res = execute(deps, mock_env(), info, msg)
             .expect("contract successfully handles Register message");
     }
 
@@ -108,11 +108,11 @@ mod tests {
 
         // anyone can register an available name with more fees than needed
         let info = mock_info("bob_key", &coins(5, "token"));
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "bob".to_string(),
         };
 
-        let _res = handle(deps.as_mut(), mock_env(), info, msg)
+        let _res = execute(deps.as_mut(), mock_env(), info, msg)
             .expect("contract successfully handles Register message");
 
         // querying for name resolves to correct address
@@ -128,10 +128,10 @@ mod tests {
 
         // bob can't register the same name
         let info = mock_info("bob_key", &coins(2, "token"));
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "alice".to_string(),
         };
-        let res = handle(deps.as_mut(), mock_env(), info, msg);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
             Ok(_) => panic!("Must return error"),
@@ -140,10 +140,10 @@ mod tests {
         }
         // alice can't register the same name again
         let info = mock_info("alice_key", &coins(2, "token"));
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "alice".to_string(),
         };
-        let res = handle(deps.as_mut(), mock_env(), info, msg);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
             Ok(_) => panic!("Must return error"),
@@ -159,39 +159,39 @@ mod tests {
         let info = mock_info("bob_key", &coins(2, "token"));
 
         // hi is too short
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "hi".to_string(),
         };
-        match handle(deps.as_mut(), mock_env(), info.clone(), msg) {
+        match execute(deps.as_mut(), mock_env(), info.clone(), msg) {
             Ok(_) => panic!("Must return error"),
             Err(ContractError::NameTooShort { .. }) => {}
             Err(_) => panic!("Unknown error"),
         }
 
         // 65 chars is too long
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "01234567890123456789012345678901234567890123456789012345678901234".to_string(),
         };
-        match handle(deps.as_mut(), mock_env(), info.clone(), msg) {
+        match execute(deps.as_mut(), mock_env(), info.clone(), msg) {
             Ok(_) => panic!("Must return error"),
             Err(ContractError::NameTooLong { .. }) => {}
             Err(_) => panic!("Unknown error"),
         }
 
         // no upper case...
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "LOUD".to_string(),
         };
-        match handle(deps.as_mut(), mock_env(), info.clone(), msg) {
+        match execute(deps.as_mut(), mock_env(), info.clone(), msg) {
             Ok(_) => panic!("Must return error"),
             Err(ContractError::InvalidCharacter { c }) => assert_eq!(c, 'L'),
             Err(_) => panic!("Unknown error"),
         }
         // ... or spaces
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "two words".to_string(),
         };
-        match handle(deps.as_mut(), mock_env(), info, msg) {
+        match execute(deps.as_mut(), mock_env(), info, msg) {
             Ok(_) => panic!("Must return error"),
             Err(ContractError::InvalidCharacter { .. }) => {}
             Err(_) => panic!("Unknown error"),
@@ -205,11 +205,11 @@ mod tests {
 
         // anyone can register an available name with sufficient fees
         let info = mock_info("alice_key", &[]);
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "alice".to_string(),
         };
 
-        let res = handle(deps.as_mut(), mock_env(), info, msg);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
             Ok(_) => panic!("register call should fail with insufficient fees"),
@@ -225,11 +225,11 @@ mod tests {
 
         // anyone can register an available name with sufficient fees
         let info = mock_info("alice_key", &coins(2, "earth"));
-        let msg = HandleMsg::Register {
+        let msg = ExecuteMsg::Register {
             name: "alice".to_string(),
         };
 
-        let res = handle(deps.as_mut(), mock_env(), info, msg);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
             Ok(_) => panic!("register call should fail with insufficient fees"),
@@ -246,12 +246,12 @@ mod tests {
 
         // alice can transfer her name successfully to bob
         let info = mock_info("alice_key", &[]);
-        let msg = HandleMsg::Transfer {
+        let msg = ExecuteMsg::Transfer {
             name: "alice".to_string(),
-            to: HumanAddr::from("bob_key"),
+            to: "bob_key".to_string(),
         };
 
-        let _res = handle(deps.as_mut(), mock_env(), info, msg)
+        let _res = execute(deps.as_mut(), mock_env(), info, msg)
             .expect("contract successfully handles Transfer message");
         // querying for name resolves to correct address (bob_key)
         assert_name_owner(deps.as_ref(), "alice", "bob_key");
@@ -265,12 +265,12 @@ mod tests {
 
         // alice can transfer her name successfully to bob
         let info = mock_info("alice_key", &vec![coin(1, "earth"), coin(2, "token")]);
-        let msg = HandleMsg::Transfer {
+        let msg = ExecuteMsg::Transfer {
             name: "alice".to_string(),
-            to: HumanAddr::from("bob_key"),
+            to: "bob_key".to_string(),
         };
 
-        let _res = handle(deps.as_mut(), mock_env(), info, msg)
+        let _res = execute(deps.as_mut(), mock_env(), info, msg)
             .expect("contract successfully handles Transfer message");
         // querying for name resolves to correct address (bob_key)
         assert_name_owner(deps.as_ref(), "alice", "bob_key");
@@ -284,12 +284,12 @@ mod tests {
 
         // alice can transfer her name successfully to bob
         let info = mock_info("frank_key", &coins(2, "token"));
-        let msg = HandleMsg::Transfer {
+        let msg = ExecuteMsg::Transfer {
             name: "alice42".to_string(),
-            to: HumanAddr::from("bob_key"),
+            to: "bob_key".to_string(),
         };
 
-        let res = handle(deps.as_mut(), mock_env(), info, msg);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
             Ok(_) => panic!("Must return error"),
@@ -309,12 +309,12 @@ mod tests {
 
         // alice can transfer her name successfully to bob
         let info = mock_info("frank_key", &coins(2, "token"));
-        let msg = HandleMsg::Transfer {
+        let msg = ExecuteMsg::Transfer {
             name: "alice".to_string(),
-            to: HumanAddr::from("bob_key"),
+            to: "bob_key".to_string(),
         };
 
-        let res = handle(deps.as_mut(), mock_env(), info, msg);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
             Ok(_) => panic!("Must return error"),
@@ -334,12 +334,12 @@ mod tests {
 
         // alice can transfer her name successfully to bob
         let info = mock_info("alice_key", &vec![coin(1, "earth"), coin(2, "token")]);
-        let msg = HandleMsg::Transfer {
+        let msg = ExecuteMsg::Transfer {
             name: "alice".to_string(),
-            to: HumanAddr::from("bob_key"),
+            to: "bob_key".to_string(),
         };
 
-        let res = handle(deps.as_mut(), mock_env(), info, msg);
+        let res = execute(deps.as_mut(), mock_env(), info, msg);
 
         match res {
             Ok(_) => panic!("register call should fail with insufficient fees"),

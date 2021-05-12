@@ -17,15 +17,13 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_std::{coin, coins, from_binary, Coin, HandleResponse, HumanAddr, InitResponse};
+use cosmwasm_std::{coin, coins, from_binary, Coin, Response, Addr};
 use cosmwasm_storage::to_length_prefixed;
-use cosmwasm_vm::testing::{
-    handle, init, mock_env, mock_instance, query, MockApi, MockQuerier, MockStorage,
-};
+use cosmwasm_vm::testing::{mock_env, mock_instance, query, MockApi, MockQuerier, MockStorage, execute, instantiate};
 use cosmwasm_vm::{from_slice, Instance, Storage};
 
 use cosmwasm_std::testing::mock_info;
-use cw_nameservice::msg::{HandleMsg, InitMsg, QueryMsg, ResolveRecordResponse};
+use cw_nameservice::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ResolveRecordResponse};
 use cw_nameservice::state::{Config, CONFIG_KEY};
 
 // This line will test the output of cargo wasm
@@ -48,33 +46,33 @@ fn assert_name_owner(
     .unwrap();
 
     let value: ResolveRecordResponse = from_binary(&res).unwrap();
-    assert_eq!(Some(HumanAddr::from(owner)), value.address);
+    assert_eq!(Some(Addr::unchecked(owner)), value.address);
 }
 
-fn mock_init_with_price(
+fn mock_instantiate_with_price(
     mut deps: &mut Instance<MockApi, MockStorage, MockQuerier>,
     purchase_price: Coin,
     transfer_price: Coin,
 ) {
-    let msg = InitMsg {
+    let msg = InstantiateMsg {
         purchase_price: Some(purchase_price),
         transfer_price: Some(transfer_price),
     };
 
     let params = mock_info("creator", &coins(2, "token"));
-    // unwrap: contract successfully handles InitMsg
-    let _res: InitResponse = init(&mut deps, mock_env(), params, msg).unwrap();
+    // unwrap: contract successfully executes InitMsg
+    let _res: Response = instantiate(&mut deps, mock_env(), params, msg).unwrap();
 }
 
-fn mock_init_no_price(mut deps: &mut Instance<MockApi, MockStorage, MockQuerier>) {
-    let msg = InitMsg {
+fn mock_instantiate_no_price(mut deps: &mut Instance<MockApi, MockStorage, MockQuerier>) {
+    let msg = InstantiateMsg {
         purchase_price: None,
         transfer_price: None,
     };
 
     let params = mock_info("creator", &coins(2, "token"));
-    // unwrap: contract successfully handles InitMsg
-    let _res: InitResponse = init(&mut deps, mock_env(), params, msg).unwrap();
+    // unwrap: contract successfully executes InitMsg
+    let _res: Response = instantiate(&mut deps, mock_env(), params, msg).unwrap();
 }
 
 fn mock_alice_registers_name(
@@ -83,18 +81,18 @@ fn mock_alice_registers_name(
 ) {
     // alice can register an available name
     let params = mock_info("alice_key", sent);
-    let msg = HandleMsg::Register {
+    let msg = ExecuteMsg::Register {
         name: "alice".to_string(),
     };
-    // unwrap: contract successfully handles Register message
-    let _res: HandleResponse = handle(&mut deps, mock_env(), params, msg).unwrap();
+    // unwrap: contract successfully executes Register message
+    let _res: Response = execute(&mut deps, mock_env(), params, msg).unwrap();
 }
 
 #[test]
-fn proper_init_no_fees() {
+fn proper_instantiate_no_fees() {
     let mut deps = mock_instance(WASM, &[]);
 
-    mock_init_no_price(&mut deps);
+    mock_instantiate_no_price(&mut deps);
 
     deps.with_storage(|storage| {
         let key = to_length_prefixed(CONFIG_KEY);
@@ -114,10 +112,10 @@ fn proper_init_no_fees() {
 }
 
 #[test]
-fn proper_init_with_prices() {
+fn proper_instantiate_with_prices() {
     let mut deps = mock_instance(WASM, &[]);
 
-    mock_init_with_price(&mut deps, coin(3, "token"), coin(4, "token"));
+    mock_instantiate_with_price(&mut deps, coin(3, "token"), coin(4, "token"));
 
     deps.with_storage(|storage| {
         let key = to_length_prefixed(CONFIG_KEY);
@@ -140,17 +138,17 @@ fn proper_init_with_prices() {
 #[test]
 fn register_available_name_and_query_works_with_prices() {
     let mut deps = mock_instance(WASM, &[]);
-    mock_init_with_price(&mut deps, coin(2, "token"), coin(2, "token"));
+    mock_instantiate_with_price(&mut deps, coin(2, "token"), coin(2, "token"));
     mock_alice_registers_name(&mut deps, &coins(2, "token"));
 
     // anyone can register an available name with more fees than needed
     let params = mock_info("bob_key", &coins(5, "token"));
-    let msg = HandleMsg::Register {
+    let msg = ExecuteMsg::Register {
         name: "bob".to_string(),
     };
 
-    // unwrap: contract successfully handles Register message
-    let _res: HandleResponse = handle(&mut deps, mock_env(), params, msg).unwrap();
+    // unwrap: contract successfully executes Register message
+    let _res: Response = execute(&mut deps, mock_env(), params, msg).unwrap();
 
     // querying for name resolves to correct address
     assert_name_owner(&mut deps, "alice", "alice_key");
@@ -160,7 +158,7 @@ fn register_available_name_and_query_works_with_prices() {
 #[test]
 fn register_available_name_and_query_works() {
     let mut deps = mock_instance(WASM, &[]);
-    mock_init_no_price(&mut deps);
+    mock_instantiate_no_price(&mut deps);
     mock_alice_registers_name(&mut deps, &[]);
 
     // querying for name resolves to correct address
@@ -171,7 +169,7 @@ fn register_available_name_and_query_works() {
 fn returns_empty_on_query_unregistered_name() {
     let mut deps = mock_instance(WASM, &[]);
 
-    mock_init_no_price(&mut deps);
+    mock_instantiate_no_price(&mut deps);
 
     // querying for unregistered name results in NotFound error
     let res = query(

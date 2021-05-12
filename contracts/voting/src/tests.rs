@@ -15,14 +15,14 @@ mod tests {
     const TEST_VOTER: &str = "voter1";
     const TEST_VOTER_2: &str = "voter2";
 
-    fn mock_init(deps: DepsMut) {
+    fn mock_instantiate(deps: DepsMut) {
         let msg = InstantiateMsg {
             denom: String::from(VOTING_TOKEN),
         };
 
         let info = mock_info(TEST_CREATOR, &coins(2, &msg.denom));
         let _res = instantiate(deps, mock_env(), info, msg)
-            .expect("contract successfully handles InitMsg");
+            .expect("contract successfully handles InstantiateMsg");
     }
 
     fn mock_info_height(sender: &str, sent: &[Coin], height: u64, time: u64) -> (Env, MessageInfo) {
@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn poll_not_found() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Poll { poll_id: 1 });
 
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn happy_days_create_poll() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
         let quorum = 30;
@@ -159,7 +159,7 @@ mod tests {
     #[test]
     fn create_poll_no_quorum() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
         let quorum = 0;
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn fails_end_poll_before_end_height() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
         let msg_end_height = 10001;
@@ -221,7 +221,7 @@ mod tests {
         let stake_amount = 1000;
 
         let mut deps = mock_dependencies(&coins(1000, VOTING_TOKEN));
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (mut creator_env, creator_info) = mock_info_height(
             TEST_CREATOR,
             &coins(2, VOTING_TOKEN),
@@ -307,7 +307,7 @@ mod tests {
     #[test]
     fn end_poll_zero_quorum() {
         let mut deps = mock_dependencies(&coins(1000, VOTING_TOKEN));
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (mut env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 1000, 10000);
 
         let msg = create_poll_msg(0, "test".to_string(), None, Some(env.block.height + 1));
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn end_poll_quorum_rejected() {
         let mut deps = mock_dependencies(&coins(100, VOTING_TOKEN));
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (mut creator_env, creator_info) =
             mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 0);
 
@@ -422,7 +422,7 @@ mod tests {
         let voter1_stake = 100;
         let voter2_stake = 1000;
         let mut deps = mock_dependencies(&coins(voter1_stake, VOTING_TOKEN));
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (mut creator_env, creator_info) =
             mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 0);
 
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     fn fails_end_poll_before_start_height() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
         let msg_start_height = 1001;
@@ -544,7 +544,7 @@ mod tests {
     #[test]
     fn fails_cast_vote_not_enough_staked() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
         let msg = create_poll_msg(0, "test".to_string(), None, None);
@@ -579,7 +579,7 @@ mod tests {
     #[test]
     fn happy_days_cast_vote() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
@@ -619,7 +619,7 @@ mod tests {
     #[test]
     fn happy_days_withdraw_voting_tokens() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::StakeVotingTokens {};
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
@@ -669,7 +669,7 @@ mod tests {
     #[test]
     fn fails_withdraw_voting_tokens_no_stake() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
         let msg = ExecuteMsg::WithdrawVotingTokens {
@@ -688,7 +688,7 @@ mod tests {
     #[test]
     fn fails_withdraw_too_many_tokens() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::StakeVotingTokens {};
         let info = mock_info(TEST_VOTER, &coins(10, VOTING_TOKEN));
@@ -715,7 +715,7 @@ mod tests {
     #[test]
     fn fails_cast_vote_twice() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
@@ -765,7 +765,7 @@ mod tests {
     #[test]
     fn fails_cast_vote_without_poll() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::CastVote {
             poll_id: 0,
@@ -786,7 +786,7 @@ mod tests {
     #[test]
     fn happy_days_stake_voting_tokens() {
         let mut deps = mock_dependencies(&[]);
-        mock_init(deps.as_mut());
+        mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::StakeVotingTokens {};
 

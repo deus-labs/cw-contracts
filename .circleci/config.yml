@@ -20,7 +20,7 @@ workflows:
 jobs:
   simple-option:
     docker:
-      - image: rust:1.47.0
+      - image: rust:1.51.0
     working_directory: ~/project/contracts/simple-option
     steps:
       - checkout:
@@ -30,7 +30,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-simple-option-rust:1.47.0-{{ checksum "Cargo.lock" }}
+            - cargocache-simple-option-rust:1.51.0-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -66,7 +66,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-simple-option-rust:1.47.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-simple-option-rust:1.51.0-{{ checksum "Cargo.lock" }}
   erc20:
     docker:
       - image: rust:1.47.0

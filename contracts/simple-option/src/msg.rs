@@ -1,10 +1,10 @@
 use crate::state::State;
-use cosmwasm_std::{Coin, HumanAddr};
+use cosmwasm_std::Coin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     // owner and creator come from env
     // collateral comes from env
     pub counter_offer: Vec<Coin>,
@@ -13,9 +13,9 @@ pub struct InitMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     /// Owner can transfer to a new owner
-    Transfer { recipient: HumanAddr },
+    Transfer { recipient: String },
     /// Owner can post counter_offer on unexpired option to execute and get the collateral
     Execute {},
     /// Burn will release collateral if expired

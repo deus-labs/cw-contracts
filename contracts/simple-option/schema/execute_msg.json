@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "HandleMsg",
+  "title": "ExecuteMsg",
   "anyOf": [
     {
       "description": "Owner can transfer to a new owner",
@@ -16,11 +16,12 @@
           ],
           "properties": {
             "recipient": {
-              "$ref": "#/definitions/HumanAddr"
+              "type": "string"
             }
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     {
       "description": "Owner can post counter_offer on unexpired option to execute and get the collateral",
@@ -32,7 +33,8 @@
         "execute": {
           "type": "object"
         }
-      }
+      },
+      "additionalProperties": false
     },
     {
       "description": "Burn will release collateral if expired",
@@ -44,12 +46,8 @@
         "burn": {
           "type": "object"
         }
-      }
+      },
+      "additionalProperties": false
     }
-  ],
-  "definitions": {
-    "HumanAddr": {
-      "type": "string"
-    }
-  }
+  ]
 }

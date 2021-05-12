@@ -1,10 +1,13 @@
-use cosmwasm_std::{CanonicalAddr, StdError, Uint128};
+use cosmwasm_std::{CanonicalAddr, OverflowError, StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
 
     #[error("insufficient funds sent")]
     InsufficientFundsSent {},

@@ -1,14 +1,14 @@
 use crate::coin_helpers::validate_sent_sufficient_coin;
 use crate::error::ContractError;
 use crate::msg::{
-    CreatePollResponse, HandleMsg, InitMsg, PollResponse, QueryMsg, TokenStakeResponse,
+    CreatePollResponse, ExecuteMsg, InstantiateMsg, PollResponse, QueryMsg, TokenStakeResponse,
 };
 use crate::state::{
     bank, bank_read, config, config_read, poll, poll_read, Poll, PollStatus, State, Voter,
 };
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Deps, DepsMut, Env,
-    HandleResponse, HumanAddr, InitResponse, MessageInfo, StdError, StdResult, Storage, Uint128,
+    attr, coin, entry_point, to_binary, Addr, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg,
+    Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Storage, Uint128,
 };
 
 pub const VOTING_TOKEN: &str = "voting_token";
@@ -17,42 +17,44 @@ const MIN_STAKE_AMOUNT: u128 = 1;
 const MIN_DESC_LENGTH: u64 = 3;
 const MAX_DESC_LENGTH: u64 = 64;
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    msg: InitMsg,
-) -> Result<InitResponse, ContractError> {
+    msg: InstantiateMsg,
+) -> Result<Response, ContractError> {
     let state = State {
         denom: msg.denom,
-        owner: deps.api.canonical_address(&info.sender)?,
+        owner: deps.api.addr_canonicalize(&info.sender.as_str())?,
         poll_count: 0,
         staked_tokens: Uint128::zero(),
     };
 
     config(deps.storage).save(&state)?;
 
-    Ok(InitResponse::default())
+    Ok(Response::default())
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: HandleMsg,
-) -> Result<HandleResponse, ContractError> {
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
     match msg {
-        HandleMsg::StakeVotingTokens {} => stake_voting_tokens(deps, env, info),
-        HandleMsg::WithdrawVotingTokens { amount } => {
+        ExecuteMsg::StakeVotingTokens {} => stake_voting_tokens(deps, env, info),
+        ExecuteMsg::WithdrawVotingTokens { amount } => {
             withdraw_voting_tokens(deps, env, info, amount)
         }
-        HandleMsg::CastVote {
+        ExecuteMsg::CastVote {
             poll_id,
             vote,
             weight,
         } => cast_vote(deps, env, info, poll_id, vote, weight),
-        HandleMsg::EndPoll { poll_id } => end_poll(deps, env, info, poll_id),
-        HandleMsg::CreatePoll {
+        ExecuteMsg::EndPoll { poll_id } => end_poll(deps, env, info, poll_id),
+        ExecuteMsg::CreatePoll {
             quorum_percentage,
             description,
             start_height,
@@ -73,30 +75,30 @@ pub fn stake_voting_tokens(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-) -> Result<HandleResponse, ContractError> {
-    let sender_address_raw = deps.api.canonical_address(&info.sender)?;
+) -> Result<Response, ContractError> {
+    let sender_address_raw = deps.api.addr_canonicalize(&info.sender.as_str())?;
     let key = &sender_address_raw.as_slice();
 
     let mut token_manager = bank_read(deps.storage).may_load(key)?.unwrap_or_default();
 
     let mut state = config(deps.storage).load()?;
 
-    validate_sent_sufficient_coin(&info.sent_funds, Some(coin(MIN_STAKE_AMOUNT, &state.denom)))?;
-    let sent_funds = info
-        .sent_funds
+    validate_sent_sufficient_coin(&info.funds, Some(coin(MIN_STAKE_AMOUNT, &state.denom)))?;
+    let funds = info
+        .funds
         .iter()
         .find(|coin| coin.denom.eq(&state.denom))
         .unwrap();
 
-    token_manager.token_balance += sent_funds.amount;
+    token_manager.token_balance += funds.amount;
 
-    let staked_tokens = state.staked_tokens.u128() + sent_funds.amount.u128();
+    let staked_tokens = state.staked_tokens.u128() + funds.amount.u128();
     state.staked_tokens = Uint128::from(staked_tokens);
     config(deps.storage).save(&state)?;
 
     bank(deps.storage).save(key, &token_manager)?;
 
-    Ok(HandleResponse::default())
+    Ok(Response::default())
 }
 
 // Withdraw amount if not staked. By default all funds will be withdrawn.
@@ -105,9 +107,9 @@ pub fn withdraw_voting_tokens(
     env: Env,
     info: MessageInfo,
     amount: Option<Uint128>,
-) -> Result<HandleResponse, ContractError> {
-    let sender_address_raw = deps.api.canonical_address(&info.sender)?;
-    let contract_address_raw = deps.api.canonical_address(&env.contract.address)?;
+) -> Result<Response, ContractError> {
+    let sender_address_raw = deps.api.addr_canonicalize(&info.sender.as_str())?;
+    let contract_address_raw = deps.api.addr_canonicalize(&env.contract.address.as_str())?;
     let key = sender_address_raw.as_slice();
 
     if let Some(mut token_manager) = bank_read(deps.storage).may_load(key)? {
@@ -118,23 +120,22 @@ pub fn withdraw_voting_tokens(
         }
         .unwrap();
         if largest_staked + withdraw_amount > token_manager.token_balance {
-            let max_amount = (token_manager.token_balance - largest_staked)?;
+            let max_amount = token_manager.token_balance.checked_sub(largest_staked)?;
             Err(ContractError::ExcessiveWithdraw { max_amount })
         } else {
-            let balance = (token_manager.token_balance - withdraw_amount)?;
+            let balance = token_manager.token_balance.checked_sub(withdraw_amount)?;
             token_manager.token_balance = balance;
 
             bank(deps.storage).save(key, &token_manager)?;
 
             let mut state = config(deps.storage).load()?;
-            let staked_tokens = (state.staked_tokens - withdraw_amount)?;
+            let staked_tokens = state.staked_tokens.checked_sub(withdraw_amount)?;
             state.staked_tokens = staked_tokens;
             config(deps.storage).save(&state)?;
 
             send_tokens(
                 deps.as_ref(),
                 &contract_address_raw,
-                &sender_address_raw,
                 vec![coin(withdraw_amount.u128(), &state.denom)],
                 "approve",
             )
@@ -193,7 +194,7 @@ pub fn create_poll(
     description: String,
     start_height: Option<u64>,
     end_height: Option<u64>,
-) -> Result<HandleResponse, ContractError> {
+) -> Result<Response, ContractError> {
     validate_quorum_percentage(quorum_percentage)?;
     validate_end_height(end_height, env.clone())?;
     validate_description(&description)?;
@@ -203,7 +204,7 @@ pub fn create_poll(
     let poll_id = poll_count + 1;
     state.poll_count = poll_id;
 
-    let sender_address_raw = deps.api.canonical_address(&info.sender)?;
+    let sender_address_raw = deps.api.addr_canonicalize(&info.sender.as_str())?;
     let new_poll = Poll {
         creator: sender_address_raw,
         status: PollStatus::InProgress,
@@ -221,11 +222,12 @@ pub fn create_poll(
 
     config(deps.storage).save(&state)?;
 
-    let r = HandleResponse {
+    let r = Response {
+        submessages: vec![],
         messages: vec![],
         attributes: vec![
             attr("action", "create_poll"),
-            attr("creator", deps.api.human_address(&new_poll.creator)?),
+            attr("creator", deps.api.addr_humanize(&new_poll.creator)?),
             attr("poll_id", &poll_id),
             attr("quorum_percentage", quorum_percentage.unwrap_or(0)),
             attr("end_height", new_poll.end_height),
@@ -244,11 +246,11 @@ pub fn end_poll(
     env: Env,
     info: MessageInfo,
     poll_id: u64,
-) -> Result<HandleResponse, ContractError> {
+) -> Result<Response, ContractError> {
     let key = &poll_id.to_be_bytes();
     let mut a_poll = poll(deps.storage).load(key)?;
 
-    let sender_address_raw = deps.api.canonical_address(&info.sender)?;
+    let sender_address_raw = deps.api.addr_canonicalize(&info.sender.as_str())?;
     if a_poll.creator != sender_address_raw {
         return Err(ContractError::PollNotCreator {
             creator: a_poll.creator,
@@ -333,7 +335,8 @@ pub fn end_poll(
         attr("passed", &passed),
     ];
 
-    let r = HandleResponse {
+    let r = Response {
+        submessages: vec![],
         messages: vec![],
         attributes,
         data: None,
@@ -346,14 +349,14 @@ fn unlock_tokens(
     storage: &mut dyn Storage,
     voter: &CanonicalAddr,
     poll_id: u64,
-) -> Result<HandleResponse, ContractError> {
+) -> Result<Response, ContractError> {
     let voter_key = &voter.as_slice();
     let mut token_manager = bank_read(storage).load(voter_key).unwrap();
 
     // unlock entails removing the mapped poll_id, retaining the rest
     token_manager.locked_tokens.retain(|(k, _)| k != &poll_id);
     bank(storage).save(voter_key, &token_manager)?;
-    Ok(HandleResponse::default())
+    Ok(Response::default())
 }
 
 // finds the largest locked amount in participated polls.
@@ -379,8 +382,8 @@ pub fn cast_vote(
     poll_id: u64,
     vote: String,
     weight: Uint128,
-) -> Result<HandleResponse, ContractError> {
-    let sender_address_raw = deps.api.canonical_address(&info.sender)?;
+) -> Result<Response, ContractError> {
+    let sender_address_raw = deps.api.addr_canonicalize(&info.sender.as_str())?;
     let poll_key = &poll_id.to_be_bytes();
     let state = config_read(deps.storage).load()?;
     if poll_id == 0 || state.poll_count > poll_id {
@@ -421,7 +424,8 @@ pub fn cast_vote(
         attr("voter", &info.sender),
     ];
 
-    let r = HandleResponse {
+    let r = Response {
+        submessages: vec![],
         messages: vec![],
         attributes,
         data: None,
@@ -431,19 +435,17 @@ pub fn cast_vote(
 
 fn send_tokens(
     deps: Deps,
-    from_address: &CanonicalAddr,
     to_address: &CanonicalAddr,
     amount: Vec<Coin>,
     action: &str,
-) -> Result<HandleResponse, ContractError> {
-    let from_human = deps.api.human_address(from_address)?;
-    let to_human = deps.api.human_address(to_address)?;
+) -> Result<Response, ContractError> {
+    let to_human = deps.api.addr_humanize(to_address)?;
     let attributes = vec![attr("action", action), attr("to", to_human.clone())];
 
-    let r = HandleResponse {
+    let r = Response {
+        submessages: vec![],
         messages: vec![CosmosMsg::Bank(BankMsg::Send {
-            from_address: from_human,
-            to_address: to_human,
+            to_address: to_human.to_string(),
             amount,
         })],
         attributes,
@@ -452,10 +454,13 @@ fn send_tokens(
     Ok(r)
 }
 
+#[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&config_read(deps.storage).load()?),
-        QueryMsg::TokenStake { address } => token_balance(deps, address),
+        QueryMsg::TokenStake { address } => {
+            token_balance(deps, deps.api.addr_validate(address.as_str())?)
+        }
         QueryMsg::Poll { poll_id } => query_poll(deps, poll_id),
     }
 }
@@ -470,7 +475,7 @@ fn query_poll(deps: Deps, poll_id: u64) -> StdResult<Binary> {
     .unwrap();
 
     let resp = PollResponse {
-        creator: deps.api.human_address(&poll.creator).unwrap(),
+        creator: deps.api.addr_humanize(&poll.creator).unwrap(),
         status: poll.status,
         quorum_percentage: poll.quorum_percentage,
         end_height: Some(poll.end_height),
@@ -480,8 +485,8 @@ fn query_poll(deps: Deps, poll_id: u64) -> StdResult<Binary> {
     to_binary(&resp)
 }
 
-fn token_balance(deps: Deps, address: HumanAddr) -> StdResult<Binary> {
-    let key = deps.api.canonical_address(&address).unwrap();
+fn token_balance(deps: Deps, address: Addr) -> StdResult<Binary> {
+    let key = deps.api.addr_canonicalize(&address.as_str())?;
 
     let token_manager = bank_read(deps.storage)
         .may_load(key.as_slice())?

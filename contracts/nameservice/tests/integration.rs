@@ -17,7 +17,7 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_std::{coin, coins, from_binary, Addr, Coin, Response};
+use cosmwasm_std::{coin, coins, from_binary, Coin, Response};
 use cosmwasm_storage::to_length_prefixed;
 use cosmwasm_vm::testing::{
     execute, instantiate, mock_env, mock_instance, query, MockApi, MockQuerier, MockStorage,

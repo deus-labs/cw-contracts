@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    attr, entry_point, to_binary, to_vec, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo,
-    Response, StdResult, Storage, Uint128,
+    attr, entry_point, to_binary, to_vec, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, Storage, Uint128,
 };
 use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 use std::convert::TryInto;
@@ -28,9 +28,8 @@ pub fn instantiate(
         // Initial balances
         let mut balances_store = PrefixedStorage::new(deps.storage, PREFIX_BALANCES);
         for row in msg.initial_balances {
-            let raw_address = deps.api.addr_canonicalize(&row.address.as_str())?;
             let amount_raw = row.amount.u128();
-            balances_store.set(raw_address.as_slice(), &amount_raw.to_be_bytes());
+            balances_store.set(row.address.as_str().as_bytes(), &amount_raw.to_be_bytes());
             total_supply += amount_raw;
         }
     }
@@ -83,7 +82,7 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Balance { address } => {
-            let address_key = deps.api.addr_canonicalize(&address)?;
+            let address_key = deps.api.addr_validate(&address)?;
             let balance = read_balance(deps.storage, &address_key)?;
             let out = to_binary(&BalanceResponse {
                 balance: Uint128::from(balance),
@@ -91,8 +90,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             Ok(out)
         }
         QueryMsg::Allowance { owner, spender } => {
-            let owner_key = deps.api.addr_canonicalize(&owner)?;
-            let spender_key = deps.api.addr_canonicalize(&spender)?;
+            let owner_key = deps.api.addr_validate(&owner)?;
+            let spender_key = deps.api.addr_validate(&spender)?;
             let allowance = read_allowance(deps.storage, &owner_key, &spender_key)?;
             let out = to_binary(&AllowanceResponse {
                 allowance: Uint128::from(allowance),
@@ -109,15 +108,11 @@ fn try_transfer(
     recipient: String,
     amount: &Uint128,
 ) -> Result<Response, ContractError> {
-    let sender_address_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
-    let recipient_address_raw = deps.api.addr_canonicalize(recipient.as_str())?;
-    let amount_raw = amount.u128();
-
     perform_transfer(
         deps.storage,
-        &sender_address_raw,
-        &recipient_address_raw,
-        amount_raw,
+        &info.sender,
+        &deps.api.addr_validate(recipient.as_str())?,
+        amount.u128(),
     )?;
 
     let res = Response {
@@ -141,12 +136,11 @@ fn try_transfer_from(
     recipient: String,
     amount: &Uint128,
 ) -> Result<Response, ContractError> {
-    let spender_address_raw = deps.api.addr_canonicalize(info.sender.as_ref())?;
-    let owner_address_raw = deps.api.addr_canonicalize(owner.as_str())?;
-    let recipient_address_raw = deps.api.addr_canonicalize(recipient.as_str())?;
+    let owner_address = deps.api.addr_validate(owner.as_str())?;
+    let recipient_address = deps.api.addr_validate(recipient.as_str())?;
     let amount_raw = amount.u128();
 
-    let mut allowance = read_allowance(deps.storage, &owner_address_raw, &spender_address_raw)?;
+    let mut allowance = read_allowance(deps.storage, &owner_address, &info.sender)?;
     if allowance < amount_raw {
         return Err(ContractError::InsufficientAllowance {
             allowance,
@@ -154,18 +148,8 @@ fn try_transfer_from(
         });
     }
     allowance -= amount_raw;
-    write_allowance(
-        deps.storage,
-        &owner_address_raw,
-        &spender_address_raw,
-        allowance,
-    )?;
-    perform_transfer(
-        deps.storage,
-        &owner_address_raw,
-        &recipient_address_raw,
-        amount_raw,
-    )?;
+    write_allowance(deps.storage, &owner_address, &info.sender, allowance)?;
+    perform_transfer(deps.storage, &owner_address, &recipient_address, amount_raw)?;
 
     let res = Response {
         submessages: vec![],
@@ -188,14 +172,8 @@ fn try_approve(
     spender: String,
     amount: &Uint128,
 ) -> Result<Response, ContractError> {
-    let owner_address_raw = deps.api.addr_canonicalize(&info.sender.as_str())?;
-    let spender_address_raw = deps.api.addr_canonicalize(spender.as_str())?;
-    write_allowance(
-        deps.storage,
-        &owner_address_raw,
-        &spender_address_raw,
-        amount.u128(),
-    )?;
+    let spender_address = deps.api.addr_validate(spender.as_str())?;
+    write_allowance(deps.storage, &info.sender, &spender_address, amount.u128())?;
     let res = Response {
         submessages: vec![],
         messages: vec![],
@@ -220,10 +198,9 @@ fn try_burn(
     info: MessageInfo,
     amount: &Uint128,
 ) -> Result<Response, ContractError> {
-    let owner_address_raw = &deps.api.addr_canonicalize(&info.sender.as_str())?;
     let amount_raw = amount.u128();
 
-    let mut account_balance = read_balance(deps.storage, owner_address_raw)?;
+    let mut account_balance = read_balance(deps.storage, &info.sender)?;
 
     if account_balance < amount_raw {
         return Err(ContractError::InsufficientFunds {
@@ -234,7 +211,10 @@ fn try_burn(
     account_balance -= amount_raw;
 
     let mut balances_store = PrefixedStorage::new(deps.storage, PREFIX_BALANCES);
-    balances_store.set(owner_address_raw.as_slice(), &account_balance.to_be_bytes());
+    balances_store.set(
+        info.sender.as_str().as_bytes(),
+        &account_balance.to_be_bytes(),
+    );
 
     let mut config_store = PrefixedStorage::new(deps.storage, PREFIX_CONFIG);
     let data = config_store
@@ -262,13 +242,13 @@ fn try_burn(
 
 fn perform_transfer(
     store: &mut dyn Storage,
-    from: &CanonicalAddr,
-    to: &CanonicalAddr,
+    from: &Addr,
+    to: &Addr,
     amount: u128,
 ) -> Result<(), ContractError> {
     let mut balances_store = PrefixedStorage::new(store, PREFIX_BALANCES);
 
-    let mut from_balance = match balances_store.get(from.as_slice()) {
+    let mut from_balance = match balances_store.get(from.as_str().as_bytes()) {
         Some(data) => bytes_to_u128(&data),
         None => Ok(0u128),
     }?;
@@ -280,14 +260,14 @@ fn perform_transfer(
         });
     }
     from_balance -= amount;
-    balances_store.set(from.as_slice(), &from_balance.to_be_bytes());
+    balances_store.set(from.as_str().as_ref(), &from_balance.to_be_bytes());
 
-    let mut to_balance = match balances_store.get(to.as_slice()) {
+    let mut to_balance = match balances_store.get(to.as_str().as_bytes()) {
         Some(data) => bytes_to_u128(&data),
         None => Ok(0u128),
     }?;
     to_balance += amount;
-    balances_store.set(to.as_slice(), &to_balance.to_be_bytes());
+    balances_store.set(to.as_str().as_bytes(), &to_balance.to_be_bytes());
 
     Ok(())
 }
@@ -303,39 +283,39 @@ pub fn bytes_to_u128(data: &[u8]) -> Result<u128, ContractError> {
 
 // Reads 16 byte storage value into u128
 // Returns zero if key does not exist. Errors if data found that is not 16 bytes
-pub fn read_u128(store: &ReadonlyPrefixedStorage, key: &[u8]) -> Result<u128, ContractError> {
-    let result = store.get(key);
+pub fn read_u128(store: &ReadonlyPrefixedStorage, key: &Addr) -> Result<u128, ContractError> {
+    let result = store.get(key.as_ref().as_bytes());
     match result {
         Some(data) => bytes_to_u128(&data),
         None => Ok(0u128),
     }
 }
 
-fn read_balance(store: &dyn Storage, owner: &CanonicalAddr) -> Result<u128, ContractError> {
+fn read_balance(store: &dyn Storage, owner: &Addr) -> Result<u128, ContractError> {
     let balance_store = ReadonlyPrefixedStorage::new(store, PREFIX_BALANCES);
-    read_u128(&balance_store, owner.as_slice())
+    read_u128(&balance_store, owner)
 }
 
 fn read_allowance(
     store: &dyn Storage,
-    owner: &CanonicalAddr,
-    spender: &CanonicalAddr,
+    owner: &Addr,
+    spender: &Addr,
 ) -> Result<u128, ContractError> {
     let owner_store =
-        ReadonlyPrefixedStorage::multilevel(store, &[PREFIX_ALLOWANCES, owner.as_slice()]);
-    read_u128(&owner_store, spender.as_slice())
+        ReadonlyPrefixedStorage::multilevel(store, &[PREFIX_ALLOWANCES, owner.as_str().as_bytes()]);
+    read_u128(&owner_store, spender)
 }
 
 #[allow(clippy::unnecessary_wraps)]
 fn write_allowance(
     store: &mut dyn Storage,
-    owner: &CanonicalAddr,
-    spender: &CanonicalAddr,
+    owner: &Addr,
+    spender: &Addr,
     amount: u128,
 ) -> StdResult<()> {
     let mut owner_store =
-        PrefixedStorage::multilevel(store, &[PREFIX_ALLOWANCES, owner.as_slice()]);
-    owner_store.set(spender.as_slice(), &amount.to_be_bytes());
+        PrefixedStorage::multilevel(store, &[PREFIX_ALLOWANCES, owner.as_str().as_bytes()]);
+    owner_store.set(spender.as_str().as_bytes(), &amount.to_be_bytes());
     Ok(())
 }
 
@@ -365,14 +345,14 @@ mod tests {
     use super::*;
     use crate::msg::InitialBalance;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_slice, Addr, Api, Env, MessageInfo, Storage, Timestamp, Uint128};
+    use cosmwasm_std::{from_slice, Addr, Env, MessageInfo, Storage, Timestamp, Uint128};
     use cosmwasm_storage::ReadonlyPrefixedStorage;
 
     fn mock_env_height(signer: &Addr, height: u64, time: u64) -> (Env, MessageInfo) {
         let mut env = mock_env();
         let info = mock_info(signer.as_str(), &[]);
         env.block.height = height;
-        env.block.time = Timestamp::from_nanos(time);
+        env.block.time = Timestamp::from_seconds(time);
         (env, info)
     }
 
@@ -392,25 +372,16 @@ mod tests {
         return bytes_to_u128(&data).unwrap();
     }
 
-    fn get_balance(api: &dyn Api, storage: &dyn Storage, address: &Addr) -> u128 {
-        let address_key = api
-            .addr_canonicalize(address.as_str())
-            .expect("canonical_address failed");
+    fn get_balance(storage: &dyn Storage, address: &Addr) -> u128 {
         let balances_storage = ReadonlyPrefixedStorage::new(storage, PREFIX_BALANCES);
-        return read_u128(&balances_storage, address_key.as_slice()).unwrap();
+        return read_u128(&balances_storage, address).unwrap();
     }
-    fn get_allowance(api: &dyn Api, storage: &dyn Storage, owner: &Addr, spender: &Addr) -> u128 {
-        let owner_raw_address = api
-            .addr_canonicalize(owner.as_str())
-            .expect("canonical_address failed");
-        let spender_raw_address = api
-            .addr_canonicalize(spender.as_str())
-            .expect("canonical_address failed");
+    fn get_allowance(storage: &dyn Storage, owner: &Addr, spender: &Addr) -> u128 {
         let owner_storage = ReadonlyPrefixedStorage::multilevel(
             storage,
-            &[PREFIX_ALLOWANCES, owner_raw_address.as_slice()],
+            &[PREFIX_ALLOWANCES, owner.as_ref().as_bytes()],
         );
-        return read_u128(&owner_storage, &spender_raw_address.as_slice()).unwrap();
+        return read_u128(&owner_storage, spender).unwrap();
     }
     mod instantiate {
         use super::*;
@@ -441,11 +412,7 @@ mod tests {
                 }
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11223344
             );
             assert_eq!(get_total_supply(&deps.storage), 11223344);
@@ -493,27 +460,15 @@ mod tests {
             let res = instantiate(deps.as_mut(), env, info, instantiate_msg).unwrap();
             assert_eq!(0, res.messages.len());
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -540,11 +495,7 @@ mod tests {
             let res = instantiate(deps.as_mut(), env, info, instantiate_msg).unwrap();
             assert_eq!(0, res.messages.len());
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 9007199254740993
             );
             assert_eq!(get_total_supply(&deps.storage), 9007199254740993);
@@ -568,11 +519,7 @@ mod tests {
             let res = instantiate(deps.as_mut(), env, info, instantiate_msg).unwrap();
             assert_eq!(0, res.messages.len());
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 100000000000000000000000000
             );
             assert_eq!(get_total_supply(&deps.storage), 100000000000000000000000000);
@@ -723,27 +670,15 @@ mod tests {
             assert_eq!(0, res.messages.len());
             // Initial state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -765,27 +700,15 @@ mod tests {
             );
             // New state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 10
             ); // -1
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 23
             ); // +1
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -800,27 +723,15 @@ mod tests {
             assert_eq!(0, res.messages.len());
             // Initial state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -842,35 +753,19 @@ mod tests {
             );
             // New state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 10
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr2323".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr2323".to_string())),
                 1
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -885,27 +780,15 @@ mod tests {
             assert_eq!(0, res.messages.len());
             // Initial state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -927,27 +810,15 @@ mod tests {
             );
             // New state (unchanged)
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -962,7 +833,7 @@ mod tests {
             assert_eq!(0, res.messages.len());
             let sender = Addr::unchecked("addr0000".to_string());
             // Initial state
-            assert_eq!(get_balance(&deps.api, &deps.storage, &sender), 11);
+            assert_eq!(get_balance(&deps.storage, &sender), 11);
             // Transfer
             let transfer_msg = ExecuteMsg::Transfer {
                 recipient: sender.to_string(),
@@ -980,7 +851,7 @@ mod tests {
                 ]
             );
             // New state
-            assert_eq!(get_balance(&deps.api, &deps.storage, &sender), 11);
+            assert_eq!(get_balance(&deps.storage, &sender), 11);
         }
 
         #[test]
@@ -992,27 +863,15 @@ mod tests {
             assert_eq!(0, res.messages.len());
             // Initial state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -1033,27 +892,15 @@ mod tests {
             }
             // New state (unchanged)
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addrbbbb".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addrbbbb".to_string())),
                 33
             );
             assert_eq!(get_total_supply(&deps.storage), 66);
@@ -1100,7 +947,6 @@ mod tests {
             // Existing owner
             assert_eq!(
                 get_allowance(
-                    &deps.api,
                     &deps.storage,
                     &Addr::unchecked("addr0000".to_string()),
                     &make_spender()
@@ -1110,7 +956,6 @@ mod tests {
             // Non-existing owner
             assert_eq!(
                 get_allowance(
-                    &deps.api,
                     &deps.storage,
                     &Addr::unchecked("addr4567".to_string()),
                     &make_spender()
@@ -1128,7 +973,6 @@ mod tests {
             assert_eq!(0, res.messages.len());
             assert_eq!(
                 get_allowance(
-                    &deps.api,
                     &deps.storage,
                     &Addr::unchecked("addr7654".to_string()),
                     &make_spender()
@@ -1154,7 +998,7 @@ mod tests {
                 ]
             );
             assert_eq!(
-                get_allowance(&deps.api, &deps.storage, &owner, &make_spender()),
+                get_allowance(&deps.storage, &owner, &make_spender()),
                 334422
             );
             // Updated approval
@@ -1173,10 +1017,7 @@ mod tests {
                     attr("spender", spender.as_str()),
                 ]
             );
-            assert_eq!(
-                get_allowance(&deps.api, &deps.storage, &owner, &spender),
-                777888
-            );
+            assert_eq!(get_allowance(&deps.storage, &owner, &spender), 777888);
         }
     }
 
@@ -1237,8 +1078,8 @@ mod tests {
                     attr("spender", spender.clone().to_string()),
                 ]
             );
-            assert_eq!(get_balance(&deps.api, &deps.storage, &owner), 11);
-            assert_eq!(get_allowance(&deps.api, &deps.storage, &owner, &spender), 4);
+            assert_eq!(get_balance(&deps.storage, &owner), 11);
+            assert_eq!(get_allowance(&deps.storage, &owner, &spender), 4);
             // Transfer less than allowance but more than balance
             let transfer_from_msg = ExecuteMsg::TransferFrom {
                 owner: owner.clone().to_string().to_string(),
@@ -1259,8 +1100,8 @@ mod tests {
                 ]
             );
             // State changed
-            assert_eq!(get_balance(&deps.api, &deps.storage, &owner), 8);
-            assert_eq!(get_allowance(&deps.api, &deps.storage, &owner, &spender), 1);
+            assert_eq!(get_balance(&deps.storage, &owner), 8);
+            assert_eq!(get_allowance(&deps.storage, &owner, &spender), 1);
         }
 
         #[test]
@@ -1289,8 +1130,8 @@ mod tests {
                     attr("spender", spender.clone().to_string()),
                 ]
             );
-            assert_eq!(get_balance(&deps.api, &deps.storage, &owner), 11);
-            assert_eq!(get_allowance(&deps.api, &deps.storage, &owner, &spender), 2);
+            assert_eq!(get_balance(&deps.storage, &owner), 11);
+            assert_eq!(get_allowance(&deps.storage, &owner, &spender), 2);
             // Transfer less than allowance but more than balance
             let fransfer_from_msg = ExecuteMsg::TransferFrom {
                 owner: owner.clone().to_string(),
@@ -1335,11 +1176,8 @@ mod tests {
                     attr("spender", spender.clone().to_string()),
                 ]
             );
-            assert_eq!(get_balance(&deps.api, &deps.storage, &owner), 11);
-            assert_eq!(
-                get_allowance(&deps.api, &deps.storage, &owner, &spender),
-                20
-            );
+            assert_eq!(get_balance(&deps.storage, &owner), 11);
+            assert_eq!(get_allowance(&deps.storage, &owner, &spender), 20);
             // Transfer less than allowance but more than balance
             let fransfer_from_msg = ExecuteMsg::TransferFrom {
                 owner: owner.clone().to_string(),
@@ -1391,19 +1229,11 @@ mod tests {
             assert_eq!(0, res.messages.len());
             // Initial state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(get_total_supply(&deps.storage), 33);
@@ -1424,19 +1254,11 @@ mod tests {
             );
             // New state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 10
             ); // -1
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(get_total_supply(&deps.storage), 32);
@@ -1451,19 +1273,11 @@ mod tests {
             assert_eq!(0, res.messages.len());
             // Initial state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(get_total_supply(&deps.storage), 33);
@@ -1484,19 +1298,11 @@ mod tests {
             );
             // New state (unchanged)
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(get_total_supply(&deps.storage), 33);
@@ -1511,19 +1317,11 @@ mod tests {
             assert_eq!(0, res.messages.len());
             // Initial state
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(get_total_supply(&deps.storage), 33);
@@ -1543,19 +1341,11 @@ mod tests {
             }
             // New state (unchanged)
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr0000".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr0000".to_string())),
                 11
             );
             assert_eq!(
-                get_balance(
-                    &deps.api,
-                    &deps.storage,
-                    &Addr::unchecked("addr1111".to_string())
-                ),
+                get_balance(&deps.storage, &Addr::unchecked("addr1111".to_string())),
                 22
             );
             assert_eq!(get_total_supply(&deps.storage), 33);

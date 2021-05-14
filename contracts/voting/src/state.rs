@@ -1,4 +1,4 @@
-use cosmwasm_std::{CanonicalAddr, Storage, Uint128};
+use cosmwasm_std::{Addr, Storage, Uint128};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
@@ -13,7 +13,7 @@ static BANK_KEY: &[u8] = b"bank";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
     pub denom: String,
-    pub owner: CanonicalAddr,
+    pub owner: Addr,
     pub poll_count: u64,
     pub staked_tokens: Uint128,
 }
@@ -41,12 +41,12 @@ pub enum PollStatus {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Poll {
-    pub creator: CanonicalAddr,
+    pub creator: Addr,
     pub status: PollStatus,
     pub quorum_percentage: Option<u8>,
     pub yes_votes: Uint128,
     pub no_votes: Uint128,
-    pub voters: Vec<CanonicalAddr>,
+    pub voters: Vec<Addr>,
     pub voter_info: Vec<Voter>,
     pub end_height: u64,
     pub start_height: Option<u64>,

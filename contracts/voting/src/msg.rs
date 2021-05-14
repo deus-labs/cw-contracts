@@ -1,5 +1,5 @@
 use crate::state::PollStatus;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -41,7 +41,7 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct PollResponse {
-    pub creator: Addr,
+    pub creator: String,
     pub status: PollStatus,
     pub quorum_percentage: Option<u8>,
     pub end_height: Option<u64>,

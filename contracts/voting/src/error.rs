@@ -1,4 +1,4 @@
-use cosmwasm_std::{CanonicalAddr, OverflowError, StdError, Uint128};
+use cosmwasm_std::{OverflowError, StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -31,10 +31,7 @@ pub enum ContractError {
     PollCannotEndInPast {},
 
     #[error("sender is not the creator of the poll (sender {sender} creator {creator})")]
-    PollNotCreator {
-        sender: CanonicalAddr,
-        creator: CanonicalAddr,
-    },
+    PollNotCreator { sender: String, creator: String },
 
     #[error("poll is not in progress")]
     PollNotInProgress {},

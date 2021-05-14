@@ -6,8 +6,8 @@ mod tests {
     use crate::state::{config_read, PollStatus, State};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        attr, coins, from_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
-        StdError, Timestamp, Uint128,
+        attr, coins, from_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
+        Response, StdError, Timestamp, Uint128,
     };
 
     const DEFAULT_END_HEIGHT: u64 = 100800u64;
@@ -53,7 +53,7 @@ mod tests {
             state,
             State {
                 denom: String::from(VOTING_TOKEN),
-                owner: deps.as_ref().api.addr_canonicalize(TEST_CREATOR).unwrap(),
+                owner: Addr::unchecked(TEST_CREATOR),
                 poll_count: 0,
                 staked_tokens: Uint128::zero(),
             }
@@ -632,7 +632,7 @@ mod tests {
             state,
             State {
                 denom: String::from(VOTING_TOKEN),
-                owner: deps.as_ref().api.addr_canonicalize(TEST_CREATOR).unwrap(),
+                owner: Addr::unchecked(TEST_CREATOR),
                 poll_count: 0,
                 staked_tokens: Uint128::from(11u128),
             }
@@ -659,7 +659,7 @@ mod tests {
             state,
             State {
                 denom: String::from(VOTING_TOKEN),
-                owner: deps.as_ref().api.addr_canonicalize(TEST_CREATOR).unwrap(),
+                owner: Addr::unchecked(TEST_CREATOR),
                 poll_count: 0,
                 staked_tokens: Uint128::zero(),
             }
@@ -870,7 +870,7 @@ mod tests {
             state,
             State {
                 denom: String::from(VOTING_TOKEN),
-                owner: deps.api.addr_canonicalize(TEST_CREATOR).unwrap(),
+                owner: Addr::unchecked(TEST_CREATOR),
                 poll_count: 1,
                 staked_tokens: Uint128::zero(),
             }
@@ -890,7 +890,7 @@ mod tests {
             state,
             State {
                 denom: String::from(VOTING_TOKEN),
-                owner: deps.api.addr_canonicalize(TEST_CREATOR).unwrap(),
+                owner: Addr::unchecked(TEST_CREATOR),
                 poll_count: poll_count.unwrap_or_default(),
                 staked_tokens: Uint128::from(staked_tokens),
             }

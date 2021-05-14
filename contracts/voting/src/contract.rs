@@ -103,7 +103,7 @@ pub fn stake_voting_tokens(
 // Withdraw amount if not staked. By default all funds will be withdrawn.
 pub fn withdraw_voting_tokens(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     amount: Option<Uint128>,
 ) -> Result<Response, ContractError> {
@@ -131,7 +131,7 @@ pub fn withdraw_voting_tokens(
             config(deps.storage).save(&state)?;
 
             Ok(send_tokens(
-                &env.contract.address,
+                &info.sender,
                 vec![coin(withdraw_amount.u128(), &state.denom)],
                 "approve",
             ))

@@ -649,7 +649,7 @@ mod tests {
         assert_eq!(
             msg,
             &CosmosMsg::Bank(BankMsg::Send {
-                to_address: mock_env().contract.address.to_string(),
+                to_address: TEST_VOTER.to_string(),
                 amount: coins(11, VOTING_TOKEN),
             })
         );

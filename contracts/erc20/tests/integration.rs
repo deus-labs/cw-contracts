@@ -126,15 +126,15 @@ fn instantiate_msg() -> InstantiateMsg {
         symbol: "ASH".to_string(),
         initial_balances: [
             InitialBalance {
-                address: address(1),
+                address: address(1).to_string(),
                 amount: Uint128::from(11u128),
             },
             InitialBalance {
-                address: address(2),
+                address: address(2).to_string(),
                 amount: Uint128::from(22u128),
             },
             InitialBalance {
-                address: address(3),
+                address: address(3).to_string(),
                 amount: Uint128::from(33u128),
             },
         ]
@@ -258,7 +258,7 @@ fn approve_works() {
     // After
     deps.with_storage(|storage| {
         assert_eq!(
-            get_allowance(&api, storage, owner.to_string(), spender.to_string()),
+            get_allowance(&api, storage, spender.to_string(), spender.to_string()),
             42
         );
         Ok(())

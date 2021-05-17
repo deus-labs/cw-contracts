@@ -22,7 +22,7 @@ mod tests {
 
         let info = mock_info(TEST_CREATOR, &coins(2, &msg.denom));
         let _res = instantiate(deps, mock_env(), info, msg)
-            .expect("contract successfully handles InstantiateMsg");
+            .expect("contract successfully executes InstantiateMsg");
     }
 
     fn mock_info_height(sender: &str, sent: &[Coin], height: u64, time: u64) -> (Env, MessageInfo) {
@@ -144,14 +144,14 @@ mod tests {
         let quorum = 30;
         let msg = create_poll_msg(quorum, "test".to_string(), None, None);
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
         assert_create_poll_result(
             1,
             quorum,
             DEFAULT_END_HEIGHT,
             0,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
     }
@@ -165,14 +165,14 @@ mod tests {
         let quorum = 0;
         let msg = create_poll_msg(quorum, "test".to_string(), None, None);
 
-        let handle_res = execute(deps.as_mut(), env, info, msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), env, info, msg.clone()).unwrap();
         assert_create_poll_result(
             1,
             quorum,
             DEFAULT_END_HEIGHT,
             0,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
     }
@@ -186,14 +186,14 @@ mod tests {
         let msg_end_height = 10001;
         let msg = create_poll_msg(0, "test".to_string(), None, Some(msg_end_height));
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
         assert_create_poll_result(
             1,
             0,
             msg_end_height,
             0,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
 
@@ -203,9 +203,9 @@ mod tests {
 
         let msg = ExecuteMsg::EndPoll { poll_id: 1 };
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
-        match handle_res {
+        match execute_res {
             Ok(_) => panic!("Must return error"),
             Err(ContractError::PollVotingPeriodNotExpired { expire_height }) => {
                 assert_eq!(expire_height, msg_end_height)
@@ -236,7 +236,7 @@ mod tests {
             Some(creator_env.clone().block.height + 1),
         );
 
-        let handle_res = execute(
+        let execute_res = execute(
             deps.as_mut(),
             creator_env.clone(),
             creator_info.clone(),
@@ -250,7 +250,7 @@ mod tests {
             creator_env.clone().block.height + 1,
             0,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
 
@@ -258,18 +258,18 @@ mod tests {
         let env = mock_env();
         let info = mock_info(TEST_VOTER, &coins(stake_amount, VOTING_TOKEN));
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
-        assert_stake_tokens_result(stake_amount, Some(1), handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        assert_stake_tokens_result(stake_amount, Some(1), execute_res, deps.as_mut());
 
         let msg = ExecuteMsg::CastVote {
             poll_id: 1,
             vote: "yes".to_string(),
             weight: Uint128::from(stake_amount),
         };
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "vote_casted"),
                 attr("poll_id", POLL_ID),
@@ -282,7 +282,7 @@ mod tests {
 
         let msg = ExecuteMsg::EndPoll { poll_id: 1 };
 
-        let handle_res = execute(
+        let execute_res = execute(
             deps.as_mut(),
             creator_env.clone(),
             creator_info.clone(),
@@ -291,7 +291,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "end_poll"),
                 attr("poll_id", "1"),
@@ -312,15 +312,15 @@ mod tests {
 
         let msg = create_poll_msg(0, "test".to_string(), None, Some(env.block.height + 1));
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
-        assert_create_poll_result(1, 0, 1001, 0, TEST_CREATOR, handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        assert_create_poll_result(1, 0, 1001, 0, TEST_CREATOR, execute_res, deps.as_mut());
         let msg = ExecuteMsg::EndPoll { poll_id: 1 };
         env.block.height = &env.block.height + 2;
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+        let execute_res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "end_poll"),
                 attr("poll_id", "1"),
@@ -348,7 +348,7 @@ mod tests {
             Some(creator_env.block.height + 1),
         );
 
-        let handle_res = execute(
+        let execute_res = execute(
             deps.as_mut(),
             creator_env.clone(),
             creator_info.clone(),
@@ -356,7 +356,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "create_poll"),
                 attr("creator", TEST_CREATOR),
@@ -371,18 +371,18 @@ mod tests {
         let stake_amount = 100;
         let (env, info) = mock_info_height(TEST_VOTER, &coins(stake_amount, VOTING_TOKEN), 0, 0);
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
-        assert_stake_tokens_result(stake_amount, Some(1), handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        assert_stake_tokens_result(stake_amount, Some(1), execute_res, deps.as_mut());
 
         let msg = ExecuteMsg::CastVote {
             poll_id: 1,
             vote: "yes".to_string(),
             weight: Uint128::from(10u128),
         };
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "vote_casted"),
                 attr("poll_id", "1"),
@@ -395,7 +395,7 @@ mod tests {
 
         creator_env.block.height = &creator_env.block.height + 2;
 
-        let handle_res = execute(
+        let execute_res = execute(
             deps.as_mut(),
             creator_env.clone(),
             creator_info.clone(),
@@ -403,7 +403,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "end_poll"),
                 attr("poll_id", "1"),
@@ -433,7 +433,7 @@ mod tests {
             Some(creator_env.block.height + 1),
         );
 
-        let handle_res = execute(
+        let execute_res = execute(
             deps.as_mut(),
             creator_env.clone(),
             creator_info.clone(),
@@ -441,7 +441,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "create_poll"),
                 attr("creator", TEST_CREATOR),
@@ -455,17 +455,17 @@ mod tests {
         let msg = ExecuteMsg::StakeVotingTokens {};
         let (_, info) = mock_info_height(TEST_VOTER, &coins(voter1_stake, VOTING_TOKEN), 0, 0);
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
-        assert_stake_tokens_result(voter1_stake, Some(1), handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        assert_stake_tokens_result(voter1_stake, Some(1), execute_res, deps.as_mut());
 
         let msg = ExecuteMsg::StakeVotingTokens {};
         let info = mock_info(TEST_VOTER_2, &coins(voter2_stake, VOTING_TOKEN));
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
         assert_stake_tokens_result(
             voter1_stake + voter2_stake,
             Some(1),
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
 
@@ -475,13 +475,13 @@ mod tests {
             vote: "no".to_string(),
             weight: Uint128::from(voter2_stake),
         };
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
-        assert_cast_vote_success(TEST_VOTER_2, voter2_stake, 1, handle_res);
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        assert_cast_vote_success(TEST_VOTER_2, voter2_stake, 1, execute_res);
 
         let msg = ExecuteMsg::EndPoll { poll_id: 1 };
 
         creator_env.block.height = &creator_env.block.height + 2;
-        let handle_res = execute(
+        let execute_res = execute(
             deps.as_mut(),
             creator_env.clone(),
             creator_info.clone(),
@@ -489,7 +489,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "end_poll"),
                 attr("poll_id", "1"),
@@ -518,21 +518,21 @@ mod tests {
             None,
         );
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
         assert_create_poll_result(
             1,
             quorum_percentage,
             DEFAULT_END_HEIGHT,
             msg_start_height,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
         let msg = ExecuteMsg::EndPoll { poll_id: 1 };
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
-        match handle_res {
+        match execute_res {
             Ok(_) => panic!("Must return error"),
             Err(ContractError::PoolVotingPeriodNotStarted { start_height }) => {
                 assert_eq!(start_height, msg_start_height)
@@ -549,14 +549,14 @@ mod tests {
 
         let msg = create_poll_msg(0, "test".to_string(), None, None);
 
-        let handle_res = execute(deps.as_mut(), env, info, msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), env, info, msg.clone()).unwrap();
         assert_create_poll_result(
             1,
             0,
             DEFAULT_END_HEIGHT,
             0,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
 
@@ -587,22 +587,22 @@ mod tests {
 
         let msg = create_poll_msg(quorum_percentage, "test".to_string(), None, None);
 
-        let handle_res = execute(deps.as_mut(), env, info, msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), env, info, msg.clone()).unwrap();
         assert_create_poll_result(
             1,
             quorum_percentage,
             DEFAULT_END_HEIGHT,
             0,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
 
         let msg = ExecuteMsg::StakeVotingTokens {};
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
-        assert_stake_tokens_result(11, Some(1), handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        assert_stake_tokens_result(11, Some(1), execute_res, deps.as_mut());
 
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
         let weight = 10u128;
@@ -612,8 +612,8 @@ mod tests {
             weight: Uint128::from(weight),
         };
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
-        assert_cast_vote_success(TEST_VOTER, weight, 1, handle_res);
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        assert_cast_vote_success(TEST_VOTER, weight, 1, execute_res);
     }
 
     #[test]
@@ -624,8 +624,8 @@ mod tests {
         let msg = ExecuteMsg::StakeVotingTokens {};
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
-        assert_stake_tokens_result(11, None, handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        assert_stake_tokens_result(11, None, execute_res, deps.as_mut());
 
         let state = config_read(&mut deps.storage).load().unwrap();
         assert_eq!(
@@ -643,8 +643,8 @@ mod tests {
             amount: Some(Uint128::from(11u128)),
         };
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
-        let msg = handle_res.messages.get(0).expect("no message");
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        let msg = execute_res.messages.get(0).expect("no message");
 
         assert_eq!(
             msg,
@@ -693,8 +693,8 @@ mod tests {
         let msg = ExecuteMsg::StakeVotingTokens {};
         let info = mock_info(TEST_VOTER, &coins(10, VOTING_TOKEN));
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
-        assert_stake_tokens_result(10, None, handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        assert_stake_tokens_result(10, None, execute_res, deps.as_mut());
 
         let info = mock_info(TEST_VOTER, &[]);
         let msg = ExecuteMsg::WithdrawVotingTokens {
@@ -721,7 +721,7 @@ mod tests {
 
         let quorum_percentage = 30;
         let msg = create_poll_msg(quorum_percentage, "test".to_string(), None, None);
-        let handle_res = execute(deps.as_mut(), env.clone(), info, msg.clone()).unwrap();
+        let execute_res = execute(deps.as_mut(), env.clone(), info, msg.clone()).unwrap();
 
         assert_create_poll_result(
             1,
@@ -729,15 +729,15 @@ mod tests {
             DEFAULT_END_HEIGHT,
             0,
             TEST_CREATOR,
-            handle_res,
+            execute_res,
             deps.as_mut(),
         );
 
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
         let msg = ExecuteMsg::StakeVotingTokens {};
 
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
-        assert_stake_tokens_result(11, Some(1), handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        assert_stake_tokens_result(11, Some(1), execute_res, deps.as_mut());
 
         let weight = 1u128;
         let msg = ExecuteMsg::CastVote {
@@ -745,8 +745,8 @@ mod tests {
             vote: "yes".to_string(),
             weight: Uint128::from(weight),
         };
-        let handle_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
-        assert_cast_vote_success(TEST_VOTER, weight, 1, handle_res);
+        let execute_res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        assert_cast_vote_success(TEST_VOTER, weight, 1, execute_res);
 
         let msg = ExecuteMsg::CastVote {
             poll_id: 1,
@@ -792,8 +792,8 @@ mod tests {
 
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
 
-        let handle_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
-        assert_stake_tokens_result(11, None, handle_res, deps.as_mut());
+        let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
+        assert_stake_tokens_result(11, None, execute_res, deps.as_mut());
     }
 
     #[test]
@@ -849,11 +849,11 @@ mod tests {
         end_height: u64,
         start_height: u64,
         creator: &str,
-        handle_res: Response,
+        execute_res: Response,
         deps: DepsMut,
     ) {
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "create_poll"),
                 attr("creator", creator),
@@ -880,10 +880,10 @@ mod tests {
     fn assert_stake_tokens_result(
         staked_tokens: u128,
         poll_count: Option<u64>,
-        handle_res: Response,
+        execute_res: Response,
         deps: DepsMut,
     ) {
-        assert_eq!(handle_res, Response::default());
+        assert_eq!(execute_res, Response::default());
 
         let state = config_read(deps.storage).load().unwrap();
         assert_eq!(
@@ -897,9 +897,9 @@ mod tests {
         );
     }
 
-    fn assert_cast_vote_success(voter: &str, weight: u128, poll_id: u64, handle_res: Response) {
+    fn assert_cast_vote_success(voter: &str, weight: u128, poll_id: u64, execute_res: Response) {
         assert_eq!(
-            handle_res.attributes,
+            execute_res.attributes,
             vec![
                 attr("action", "vote_casted"),
                 attr("poll_id", poll_id),

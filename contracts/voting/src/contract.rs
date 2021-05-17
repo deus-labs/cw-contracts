@@ -111,11 +111,7 @@ pub fn withdraw_voting_tokens(
 
     if let Some(mut token_manager) = bank_read(deps.storage).may_load(sender_address_raw)? {
         let largest_staked = locked_amount(&sender_address_raw, deps.storage);
-        let withdraw_amount = match amount {
-            Some(amount) => Some(amount),
-            None => Some(token_manager.token_balance),
-        }
-        .unwrap();
+        let withdraw_amount = amount.unwrap_or(token_manager.token_balance);
         if largest_staked + withdraw_amount > token_manager.token_balance {
             let max_amount = token_manager.token_balance.checked_sub(largest_staked)?;
             Err(ContractError::ExcessiveWithdraw { max_amount })
@@ -471,10 +467,8 @@ fn query_poll(deps: Deps, poll_id: u64) -> StdResult<Binary> {
 }
 
 fn token_balance(deps: Deps, address: Addr) -> StdResult<Binary> {
-    let key = deps.api.addr_canonicalize(&address.as_str())?;
-
     let token_manager = bank_read(deps.storage)
-        .may_load(key.as_slice())?
+        .may_load(address.as_str().as_bytes())?
         .unwrap_or_default();
 
     let resp = TokenStakeResponse {

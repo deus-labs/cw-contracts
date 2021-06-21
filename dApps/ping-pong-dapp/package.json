@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@cosmjs/cosmwasm-stargate": "^0.25.4",
+    "@cosmjs/crypto": "^0.25.4",
+    "@cosmjs/faucet-client": "^0.25.4",
+    "@cosmjs/proto-signing": "^0.25.4",
+    "@cosmjs/stargate": "^0.25.4",
     "@craco/craco": "^6.1.2",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",

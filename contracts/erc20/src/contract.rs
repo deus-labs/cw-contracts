@@ -41,7 +41,7 @@ pub fn instantiate(
     if !is_valid_symbol(&msg.symbol) {
         return Err(ContractError::TickerWrongSymbolFormat {});
     }
-    if msg.decimals > 18 {
+    if msg.decimals > u8::MAX {
         return Err(ContractError::DecimalsExceeded {});
     }
 

@@ -41,7 +41,7 @@ pub fn instantiate(
     if !is_valid_symbol(&msg.symbol) {
         return Err(ContractError::TickerWrongSymbolFormat {});
     }
-    if msg.decimals > u8::MAX {
+    if msg.decimals > u8::MAX - 1 {
         return Err(ContractError::DecimalsExceeded {});
     }
 
@@ -533,7 +533,7 @@ mod tests {
             let instantiate_msg = InstantiateMsg {
                 name: "Cash Token".to_string(),
                 symbol: "CASH".to_string(),
-                decimals: 42,
+                decimals: u8::MAX,
                 initial_balances: [].to_vec(),
             };
             let (env, info) = mock_env_height("creator", 450, 550);

@@ -195,9 +195,6 @@ jobs:
           name: Build Wasm
           command: cargo wasm --locked
       - run:
-          name: Integration Tests
-          command: cargo integration-test --locked -- --test-threads=2
-      - run:
           name: Check formatting
           command: cargo fmt -- --check
       - run:

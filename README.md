@@ -1,6 +1,6 @@
 # CosmWasm Examples
 
-[![CircleCI](https://circleci.com/gh/CosmWasm/cosmwasm-examples/tree/main.svg?style=shield)](https://circleci.com/gh/CosmWasm/cosmwasm-examples/tree/main)
+[![CircleCI](https://circleci.com/gh/InterWasm/cw-contacts/tree/main.svg?style=shield)](https://app.circleci.com/pipelines/github/InterWasm/cw-contracts)
 
 This repo is a collection of simple contracts built with the
 [cosmwasm](https://github.com/CosmWasm/cosmwasm) framework.

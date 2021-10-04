@@ -13,11 +13,18 @@ This allows us to compile all contracts with one command.
 
 ## Usage:
 
-The following contracts are available for use. You can view the source code under `src`
-and a precompiled wasm ready for deployment under `contract.wasm`. Take a look here:
+The following contracts are available for use. For each of the contracts in `contracts`, you can view the source code under `src`
+and a precompiled wasm ready for deployment called `contract.wasm`. (first you might have to build to get `contract.wasm`)
+
+Take a look here:
 
 * [escrow](https://github.com/CosmWasm/cw-examples/tree/main/contracts/escrow) - A basic escrow with timeout and partial release
 * [erc20](https://github.com/CosmWasm/cw-examples/tree/main/contracts/erc20) - Basic implementation the erc20 interface for CosmWasm, as a base for token designers
+* [nameservice](https://github.com/CosmWasm/cw-examples/tree/main/contracts/nameservice) - Simple name service application to buy names and map values to those names
+* [voting](https://github.com/CosmWasm/cw-examples/tree/main/contracts/voting) - An example voting contract to create, manage, vote and deposit on polls
+* [simple-option](https://github.com/CosmWasm/cw-examples/tree/main/contracts/simple-option) - A contract that replicates options in finance
+
+You can get more info from `README.md` file in each of the contacts.
 
 ## Development
 

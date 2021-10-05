@@ -1,13 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
+    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Uint128,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, PotResponse, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, PotResponse, QueryMsg, ReceiveMsg};
 use crate::state::{save_pot, Config, Pot, CONFIG, POTS, POT_SEQ};
+use cw20::{Cw20Contract, Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw20-example";
@@ -53,6 +55,7 @@ pub fn execute(
             target_addr,
             threshold,
         } => execute_create_pot(deps, info, target_addr, threshold),
+        ExecuteMsg::Receive(msg) => execute_receive(deps, info, msg),
     }
 }
 
@@ -82,6 +85,59 @@ pub fn execute_create_pot(
         .add_attribute("threshold_amount", threshold))
 }
 
+pub fn execute_receive(
+    deps: DepsMut,
+    info: MessageInfo,
+    wrapped: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    // cw20 address authentication
+    let config = CONFIG.load(deps.storage)?;
+    if config.cw20_addr != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let msg: ReceiveMsg = from_binary(&wrapped.msg)?;
+    match msg {
+        ReceiveMsg::Send { id } => receive_send(deps, id, wrapped.amount, info.sender),
+    }
+}
+
+pub fn receive_send(
+    deps: DepsMut,
+    pot_id: Uint128,
+    amount: Uint128,
+    cw20_addr: Addr,
+) -> Result<Response, ContractError> {
+    // load pot
+    let mut pot = POTS.load(deps.storage, pot_id.u128().into())?;
+
+    pot.collected += amount;
+    if pot.collected >= pot.threshold {
+        pot.ready = true
+    }
+
+    POTS.save(deps.storage, pot_id.u128().into(), &pot)?;
+
+    let mut res = Response::new()
+        .add_attribute("action", "receive_send")
+        .add_attribute("pot_id", pot_id)
+        .add_attribute("collected", pot.collected)
+        .add_attribute("threshold", pot.threshold)
+        .add_attribute("ready", pot.ready.to_string());
+
+    // if threshold passed, send cw20 token to target
+    if pot.ready {
+        let cw20 = Cw20Contract(cw20_addr);
+        let msg = cw20.call(Cw20ExecuteMsg::Transfer {
+            recipient: pot.target_addr.into_string(),
+            amount: pot.collected,
+        })?;
+        res = res.add_message(msg);
+    }
+
+    Ok(res)
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -103,77 +159,7 @@ fn query_pot(deps: Deps, id: Uint128) -> StdResult<PotResponse> {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{from_binary, Addr};
-
-    /*
-    #[test]
-    fn proper_initialization() {
-        let mut deps = mock_dependencies(&[]);
-
-        let info = mock_info("creator", &coins(1000, "earth"));
-        let msg = InstantiateMsg { admin: None };
-
-        // we can just call .unwrap() to assert this was a success
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
-
-        // it worked, let's query the state
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
-        assert_eq!(17, value.count);
-    }
-
-     */
-
-    /*
-    #[test]
-    fn increment() {
-        let mut deps = mock_dependencies(&[]);
-
-        let msg = InstantiateMsg { admin: None };
-        let info = mock_info("creator", &[]);
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // beneficiary can release it
-        let info = mock_info("anyone", &[]);
-        let msg = ExecuteMsg::Increment {};
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // should increase counter by 1
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
-        assert_eq!(18, value.count);
-    }
-
-
-    #[test]
-    fn reset() {
-        let mut deps = mock_dependencies(&[]);
-
-        let msg = InstantiateMsg { admin: None };
-        let info = mock_info("creator", &[]);
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // beneficiary can release it
-        let unauth_info = mock_info("anyone", &[]);
-        let msg = ExecuteMsg::Reset { count: 5 };
-        let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
-        match res {
-            Err(ContractError::Unauthorized {}) => {}
-            _ => panic!("Must return unauthorized error"),
-        }
-
-        // only the original creator can reset the counter
-        let auth_info = mock_info("creator", &[]);
-        let msg = ExecuteMsg::Reset { count: 5 };
-        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
-
-        // should now be 5
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
-        assert_eq!(5, value.count);
-    }
-     */
+    use cosmwasm_std::{from_binary, Addr, CosmosMsg, WasmMsg};
 
     #[test]
     fn create_pot() {
@@ -208,6 +194,95 @@ mod tests {
                 target_addr: Addr::unchecked("Some"),
                 collected: Default::default(),
                 ready: false,
+                threshold: Uint128::new(100)
+            }
+        );
+    }
+
+    #[test]
+    fn test_receive_send() {
+        let mut deps = mock_dependencies(&[]);
+
+        let msg = InstantiateMsg {
+            admin: None,
+            cw20_addr: String::from("cw20"),
+        };
+        let mut info = mock_info("creator", &[]);
+
+        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        // should create pot
+        let msg = ExecuteMsg::CreatePot {
+            target_addr: String::from("Some"),
+            threshold: Uint128::new(100),
+        };
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        assert_eq!(res.messages.len(), 0);
+
+        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+            sender: String::from("cw20"),
+            amount: Uint128::new(55),
+            msg: to_binary(&ReceiveMsg::Send {
+                id: Uint128::new(1),
+            })
+            .unwrap(),
+        });
+        info.sender = Addr::unchecked("cw20");
+        let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        // query pot
+        let msg = QueryMsg::GetPot {
+            id: Uint128::new(1),
+        };
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+
+        let pot: Pot = from_binary(&res).unwrap();
+        assert_eq!(
+            pot,
+            Pot {
+                target_addr: Addr::unchecked("Some"),
+                collected: Uint128::new(55),
+                ready: false,
+                threshold: Uint128::new(100)
+            }
+        );
+
+        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+            sender: String::from("cw20"),
+            amount: Uint128::new(55),
+            msg: to_binary(&ReceiveMsg::Send {
+                id: Uint128::new(1),
+            })
+            .unwrap(),
+        });
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let msg = res.messages[0].clone().msg;
+        assert_eq!(
+            msg,
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: String::from("cw20"),
+                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    recipient: String::from("Some"),
+                    amount: Uint128::new(110)
+                })
+                .unwrap(),
+                funds: vec![]
+            })
+        );
+
+        // query pot
+        let msg = QueryMsg::GetPot {
+            id: Uint128::new(1),
+        };
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+
+        let pot: Pot = from_binary(&res).unwrap();
+        assert_eq!(
+            pot,
+            Pot {
+                target_addr: Addr::unchecked("Some"),
+                collected: Uint128::new(110),
+                ready: true,
                 threshold: Uint128::new(100)
             }
         );

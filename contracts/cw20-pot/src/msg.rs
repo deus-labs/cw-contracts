@@ -1,4 +1,5 @@
 use cosmwasm_std::Uint128;
+use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +18,15 @@ pub enum ExecuteMsg {
         /// threshold is the token amount for releasing tokens.
         threshold: Uint128,
     },
+    /// Receive forwards received cw20 tokens to an execution logic
+    Receive(Cw20ReceiveMsg),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ReceiveMsg {
+    // Send sends token to an id with defined pot
+    Send { id: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

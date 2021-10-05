@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -25,12 +25,14 @@ pub fn instantiate(
         .unwrap_or(info.sender);
     let config = Config {
         owner: owner.clone(),
+        cw20_addr: deps.api.addr_validate(msg.cw20_addr.as_str())?
     };
     CONFIG.save(deps.storage, &config);
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
-        .add_attribute("owner", owner))
+        .add_attribute("owner", owner)
+        .add_attribute("cw20_addr", msg.cw20_addr))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -41,28 +43,16 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Increment {} => try_increment(deps),
-        ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+        ExecuteMsg::CreatePot{ target_addr, threshold } => execute_create_pot(deps, info, target_addr, threshold),
     }
 }
 
-pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        state.count += 1;
-        Ok(state)
-    })?;
+pub fn execute_create_pot(deps: DepsMut, info: MessageInfo, target_addr: String, threshold: Uint128) -> Result<Response, ContractError> {
 
-    Ok(Response::new().add_attribute("method", "try_increment"))
-}
-pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        if info.sender != state.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        state.count = count;
-        Ok(state)
-    })?;
-    Ok(Response::new().add_attribute("method", "reset"))
+    // owner authentication
+    // target address validation
+    //
+    Ok(Response::new().add_attribute("action", "execute_create_pot"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -3,8 +3,8 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use cw20_example::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use cw20_example::state::State;
+use cw20_pot::msg::{ExecuteMsg, InstantiateMsg, PotResponse, QueryMsg};
+use cw20_pot::state::{Config, Pot};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -15,6 +15,7 @@ fn main() {
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
-    export_schema(&schema_for!(State), &out_dir);
-    export_schema(&schema_for!(CountResponse), &out_dir);
+    export_schema(&schema_for!(Config), &out_dir);
+    export_schema(&schema_for!(Pot), &out_dir);
+    export_schema(&schema_for!(PotResponse), &out_dir);
 }

@@ -5,14 +5,6 @@ use cosmwasm_std::{Addr, DepsMut, StdResult, Uint128};
 use cw_storage_plus::{Item, Map, U128Key};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct State {
-    pub count: i32,
-    pub owner: Addr,
-}
-
-pub const STATE: Item<State> = Item::new("state");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub owner: Addr,
     pub cw20_addr: Addr,

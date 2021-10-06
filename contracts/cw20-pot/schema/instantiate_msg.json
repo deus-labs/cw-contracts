@@ -13,6 +13,7 @@
       ]
     },
     "cw20_addr": {
+      "description": "cw20_addr is the address of the allowed cw20 token",
       "type": "string"
     }
   }

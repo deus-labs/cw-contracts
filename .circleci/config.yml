@@ -8,6 +8,7 @@ workflows:
       - escrow
       - nameservice
       - voting
+      - cw20-pot
   deploy:
     jobs:
       - build_and_upload_contracts:
@@ -266,7 +267,55 @@ jobs:
             - /usr/local/cargo/registry
             - target
           key: cargocache-voting-rust:1.51.0-{{ checksum "Cargo.lock" }}
-
+  cw20-pot:
+    docker:
+      - image: rust:1.51.0
+    working_directory: ~/project/contracts/cw20-pot
+    steps:
+      - checkout:
+          path: ~/project
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version
+      - restore_cache:
+          keys:
+            - cargocache-cw20-pot-rust:1.51.0-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Add wasm32 target
+          command: rustup target add wasm32-unknown-unknown
+      - run:
+          name: Add components to Rust toolchain
+          command: rustup component add rustfmt clippy
+      - run:
+          name: Build Wasm
+          command: cargo wasm --locked
+      - run:
+          name: Unit Tests
+          env: RUST_BACKTRACE=1
+          command: cargo unit-test --locked
+      - run:
+          name: Check formatting
+          command: cargo fmt -- --check
+      - run:
+          name: Lint
+          command: cargo clippy -- -D warnings
+      - run:
+          name: Build and run schema generator
+          command: cargo schema --locked
+      - run:
+          name: Ensure checked-in source code and schemas are up-to-date
+          command: |
+            CHANGES_IN_REPO=$(git status --porcelain)
+            if [[ -n "$CHANGES_IN_REPO" ]]; then
+              echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+              git status && git --no-pager diff
+              exit 1
+            fi
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target
+          key: cargocache-cw20-pot-rust:1.51.0-{{ checksum "Cargo.lock" }}
   # This job is based in cosmwasm-plus/.circleci/config.yml
   build_and_upload_contracts:
     docker:

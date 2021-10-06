@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub admin: Option<String>,
+    /// cw20_addr is the address of the allowed cw20 token
     pub cw20_addr: String,
 }
 

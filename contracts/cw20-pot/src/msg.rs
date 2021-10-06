@@ -45,6 +45,4 @@ pub struct PotResponse {
     pub threshold: Uint128,
     /// collected keeps information on how much is collected for this pot.
     pub collected: Uint128,
-    /// ready presents if this pot is ready to be collected.
-    pub ready: bool,
 }

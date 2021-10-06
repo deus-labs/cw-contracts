@@ -75,7 +75,6 @@ pub fn execute_create_pot(
         target_addr: deps.api.addr_validate(target_addr.as_str())?,
         threshold,
         collected: Uint128::zero(),
-        ready: false,
     };
     save_pot(deps, &pot)?;
 
@@ -112,9 +111,6 @@ pub fn receive_send(
     let mut pot = POTS.load(deps.storage, pot_id.u128().into())?;
 
     pot.collected += amount;
-    if pot.collected >= pot.threshold {
-        pot.ready = true
-    }
 
     POTS.save(deps.storage, pot_id.u128().into(), &pot)?;
 
@@ -122,11 +118,9 @@ pub fn receive_send(
         .add_attribute("action", "receive_send")
         .add_attribute("pot_id", pot_id)
         .add_attribute("collected", pot.collected)
-        .add_attribute("threshold", pot.threshold)
-        .add_attribute("ready", pot.ready.to_string());
+        .add_attribute("threshold", pot.threshold);
 
-    // if threshold passed, send cw20 token to target
-    if pot.ready {
+    if pot.collected >= pot.threshold {
         let cw20 = Cw20Contract(cw20_addr);
         let msg = cw20.call(Cw20ExecuteMsg::Transfer {
             recipient: pot.target_addr.into_string(),
@@ -150,7 +144,6 @@ fn query_pot(deps: Deps, id: Uint128) -> StdResult<PotResponse> {
     Ok(PotResponse {
         target_addr: pot.target_addr.into_string(),
         collected: pot.collected,
-        ready: pot.ready,
         threshold: pot.threshold,
     })
 }
@@ -193,7 +186,6 @@ mod tests {
             Pot {
                 target_addr: Addr::unchecked("Some"),
                 collected: Default::default(),
-                ready: false,
                 threshold: Uint128::new(100)
             }
         );
@@ -242,7 +234,6 @@ mod tests {
             Pot {
                 target_addr: Addr::unchecked("Some"),
                 collected: Uint128::new(55),
-                ready: false,
                 threshold: Uint128::new(100)
             }
         );
@@ -282,7 +273,6 @@ mod tests {
             Pot {
                 target_addr: Addr::unchecked("Some"),
                 collected: Uint128::new(110),
-                ready: true,
                 threshold: Uint128::new(100)
             }
         );

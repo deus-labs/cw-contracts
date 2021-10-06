@@ -28,8 +28,6 @@ pub struct Pot {
     pub threshold: Uint128,
     /// collected keeps information on how much is collected for this pot.
     pub collected: Uint128,
-    /// ready presents if this pot is ready to be collected.
-    pub ready: bool,
 }
 /// POT_SEQ holds the last pot ID
 pub const POT_SEQ: Item<Uint128> = Item::new("pot_seq");

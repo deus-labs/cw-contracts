@@ -3,12 +3,17 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "count"
+    "cw20_addr"
   ],
   "properties": {
-    "count": {
-      "type": "integer",
-      "format": "int32"
+    "admin": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cw20_addr": {
+      "type": "string"
     }
   }
 }

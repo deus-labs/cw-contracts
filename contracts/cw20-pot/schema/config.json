@@ -1,15 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "State",
+  "title": "Config",
   "type": "object",
   "required": [
-    "count",
+    "cw20_addr",
     "owner"
   ],
   "properties": {
-    "count": {
-      "type": "integer",
-      "format": "int32"
+    "cw20_addr": {
+      "$ref": "#/definitions/Addr"
     },
     "owner": {
       "$ref": "#/definitions/Addr"

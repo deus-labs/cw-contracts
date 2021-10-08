@@ -14,7 +14,7 @@ This allows us to compile all contracts with one command.
 ## Usage:
 
 The following contracts are available for use. For each of the contracts in `contracts`, you can view the source code under `src`
-and a precompiled wasm ready for deployment called `contract.wasm`. (first you might have to build to get `contract.wasm`)
+and a precompiled wasm ready for deployment called `contract.wasm`.
 
 Take a look here:
 
@@ -61,5 +61,5 @@ optimized build for each contract and saves them to the `./artifacts` directory:
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.11.4 ./contracts/*/
+  cosmwasm/rust-optimizer:0.12.3 ./contracts/*/
 ```

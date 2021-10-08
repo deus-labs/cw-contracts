@@ -23,6 +23,7 @@ Take a look here:
 * [nameservice](https://github.com/CosmWasm/cw-examples/tree/main/contracts/nameservice) - Simple name service application to buy names and map values to those names
 * [voting](https://github.com/CosmWasm/cw-examples/tree/main/contracts/voting) - An example voting contract to create, manage, vote and deposit on polls
 * [simple-option](https://github.com/CosmWasm/cw-examples/tree/main/contracts/simple-option) - A contract that replicates options in finance
+* [cw20-pot](https://github.com/CosmWasm/cw-examples/tree/main/contracts/cw20-pot) - Basic smart contract using cw20 contact
 
 You can get more info from `README.md` file in each of the contacts.
 

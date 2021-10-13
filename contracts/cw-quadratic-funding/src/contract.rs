@@ -1,4 +1,4 @@
-use cosmwasm_std::{attr, coin, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, Response, MessageInfo, Order, StdResult, Addr};
+use cosmwasm_std::{attr, coin, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, Response, MessageInfo, Order, StdResult};
 
 use crate::error::ContractError;
 use crate::helper::extract_budget_coin;
@@ -360,7 +360,7 @@ mod tests {
             fund_address: "fund_address".to_string(),
         };
 
-        let res = execute(
+        let _res = execute(
             deps.as_mut(),
             env.clone(),
             info.clone(),
@@ -368,10 +368,10 @@ mod tests {
         ).unwrap();
 
         let msg = ExecuteMsg::VoteProposal { proposal_id: 1 };
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         // double vote prevention
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         // whitelist check
         let mut deps = mock_dependencies(&[]);

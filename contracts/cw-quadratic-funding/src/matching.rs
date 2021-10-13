@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use cosmwasm_std::{CanonicalAddr, Addr};
+
 use integer_sqrt::IntegerSquareRoot;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -82,7 +82,7 @@ fn constrain_by_budget(grants: Vec<CalculatedGrant>, budget: u128) -> Vec<Calcul
 mod tests {
     use crate::matching::{calculate_clr, CalculatedGrant, RawGrant};
     use crate::state::Proposal;
-    use cosmwasm_std::{CanonicalAddr, Addr};
+    
 
     #[test]
     fn test_clr_1() {

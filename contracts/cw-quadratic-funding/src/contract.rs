@@ -50,7 +50,7 @@ pub fn init(
         budget,
     };
     CONFIG.save(deps.storage, &cfg)?;
-    PROPOSAL_SEQ.save(deps.storage, &0);
+    PROPOSAL_SEQ.save(deps.storage, &0)?;
 
     Ok(Response::default())
 }
@@ -306,12 +306,16 @@ mod tests {
             fund_address: "fund_address".to_string(),
         };
 
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
-        assert_eq!(res.data.unwrap(), Binary::from(1_u64.to_be_bytes()));
+        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         // proposal period expired
         env.block.height = env.block.height + 1000;
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        match res {
+            Ok(_) => panic!("expected error"),
+            Err(ContractError::ProposalPeriodExpired{}) => {}
+            e => panic!("unexpected error, got {:?}", e),
+        }
 
         // unauthorised
         let env = mock_env();
@@ -331,7 +335,12 @@ mod tests {
         };
         init(deps.as_mut(), env.clone(), info.clone(), init_msg.clone()).unwrap();
 
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        match res {
+            Ok(_) => panic!("expected error"),
+            Err(ContractError::Unauthorized{}) => {}
+            e => panic!("unexpected error, got {:?}", e),
+        }
     }
 
     #[test]
@@ -373,7 +382,12 @@ mod tests {
         let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         // double vote prevention
-        let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        match res {
+            Ok(_) => panic!("expected error"),
+            Err(ContractError::AddressAlreadyVotedProject{}) => {}
+            e => panic!("unexpected error, got {:?}", e),
+        }
 
         // whitelist check
         let mut deps = mock_dependencies(&[]);
@@ -429,11 +443,7 @@ mod tests {
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address1".to_string(),
         };
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
-        match res {
-            Ok(seq) => assert_eq!(seq.data.unwrap(), Binary::from(1_u64.to_be_bytes())),
-            e => panic!("unexpected error, got {:?}", e),
-        }
+        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         let msg = ExecuteMsg::CreateProposal {
             title: String::from("proposal 2"),
@@ -441,11 +451,7 @@ mod tests {
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address2".to_string(),
         };
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
-        match res {
-            Ok(seq) => assert_eq!(seq.data.unwrap(), Binary::from(2_u64.to_be_bytes())),
-            e => panic!("unexpected error, got {:?}", e),
-        }
+        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         let msg = ExecuteMsg::CreateProposal {
             title: String::from("proposal 3"),
@@ -453,22 +459,14 @@ mod tests {
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address3".to_string(),
         };
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
-        match res {
-            Ok(seq) => assert_eq!(seq.data.unwrap(), Binary::from(3_u64.to_be_bytes())),
-            e => panic!("unexpected error, got {:?}", e),
-        }
+        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
         let msg = ExecuteMsg::CreateProposal {
             title: String::from("proposal 4"),
             description: "".to_string(),
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address4".to_string(),
         };
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
-        match res {
-            Ok(seq) => assert_eq!(seq.data.unwrap(), Binary::from(4_u64.to_be_bytes())),
-            e => panic!("unexpected error, got {:?}", e),
-        }
+        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         // insert votes
         // proposal1

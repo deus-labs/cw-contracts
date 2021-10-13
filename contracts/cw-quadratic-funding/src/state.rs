@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::matching::QuadraticFundingAlgorithm;
-use cosmwasm_std::{Addr, Binary, Coin, Storage, Uint128};
+use cosmwasm_std::{Binary, Coin, Uint128};
 use cw0::Expiration;
 use cw_storage_plus::{Item, Map, U64Key};
 

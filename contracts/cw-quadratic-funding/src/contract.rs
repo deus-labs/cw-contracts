@@ -3,6 +3,8 @@ use cosmwasm_std::{
     Response, StdResult,
 };
 
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
 use crate::error::ContractError;
 use crate::helper::extract_budget_coin;
 use crate::matching::{calculate_clr, QuadraticFundingAlgorithm, RawGrant};
@@ -11,6 +13,7 @@ use crate::state::{Config, Proposal, Vote, CONFIG, PROPOSALS, PROPOSAL_SEQ, VOTE
 
 // Note, you can use StdResult in some functions where you do not
 // make use of the custom errors
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn init(
     deps: DepsMut,
     env: Env,
@@ -56,6 +59,7 @@ pub fn init(
 }
 
 // And declare a custom Error variant for the ones where you will want to make use of it
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -246,6 +250,7 @@ pub fn handle_trigger_distribution(
         .add_attribute("action", "trigger_distribution"))
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ProposalByID { id } => to_binary(&query_proposal_id(deps, id)?),

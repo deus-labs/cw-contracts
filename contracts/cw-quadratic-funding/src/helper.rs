@@ -35,7 +35,7 @@ mod tests {
         }
         let info = mock_info("creator", &[coin(4, denom), coin(4, "test")]);
 
-        match extract_budget_coin(&info.clone().funds, &denom.to_string()) {
+        match extract_budget_coin(&info.funds, &denom.to_string()) {
             Ok(_) => panic!("expected error"),
             Err(ContractError::WrongCoinSent { .. }) => {}
             Err(err) => println!("{:?}", err),

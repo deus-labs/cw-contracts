@@ -130,7 +130,7 @@ mod tests {
         ];
         let expected = vec![
             CalculatedGrant {
-                addr: proposal1.fund_address.clone(),
+                addr: proposal1.fund_address,
                 grant: 84737u128,
                 collected_vote_funds: 7200u128,
             },

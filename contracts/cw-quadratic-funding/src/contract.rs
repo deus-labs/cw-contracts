@@ -298,7 +298,7 @@ mod tests {
             },
         };
 
-        init(deps.as_mut(), env.clone(), info.clone(), init_msg.clone()).unwrap();
+        init(deps.as_mut(), env.clone(), info.clone(), init_msg).unwrap();
         let msg = ExecuteMsg::CreateProposal {
             title: String::from("test"),
             description: String::from("test"),
@@ -309,11 +309,11 @@ mod tests {
         execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
         // proposal period expired
-        env.block.height = env.block.height + 1000;
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        env.block.height += 1000;
+        let res = execute(deps.as_mut(), env, info, msg.clone());
         match res {
             Ok(_) => panic!("expected error"),
-            Err(ContractError::ProposalPeriodExpired{}) => {}
+            Err(ContractError::ProposalPeriodExpired {}) => {}
             e => panic!("unexpected error, got {:?}", e),
         }
 
@@ -333,12 +333,12 @@ mod tests {
                 parameter: "".to_string(),
             },
         };
-        init(deps.as_mut(), env.clone(), info.clone(), init_msg.clone()).unwrap();
+        init(deps.as_mut(), env.clone(), info.clone(), init_msg).unwrap();
 
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        let res = execute(deps.as_mut(), env, info, msg);
         match res {
             Ok(_) => panic!("expected error"),
-            Err(ContractError::Unauthorized{}) => {}
+            Err(ContractError::Unauthorized {}) => {}
             e => panic!("unexpected error, got {:?}", e),
         }
     }
@@ -374,7 +374,7 @@ mod tests {
             deps.as_mut(),
             env.clone(),
             info.clone(),
-            create_proposal_msg.clone(),
+            create_proposal_msg,
         )
         .unwrap();
 
@@ -385,7 +385,7 @@ mod tests {
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
         match res {
             Ok(_) => panic!("expected error"),
-            Err(ContractError::AddressAlreadyVotedProject{}) => {}
+            Err(ContractError::AddressAlreadyVotedProject {}) => {}
             e => panic!("unexpected error, got {:?}", e),
         }
 
@@ -403,9 +403,9 @@ mod tests {
         // proposal period expired
         let mut deps = mock_dependencies(&[]);
         init_msg.vote_proposal_whitelist = None;
-        init(deps.as_mut(), env.clone(), info.clone(), init_msg.clone()).unwrap();
-        env.block.height = env.block.height + 15;
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        init(deps.as_mut(), env.clone(), info.clone(), init_msg).unwrap();
+        env.block.height += 15;
+        let res = execute(deps.as_mut(), env, info, msg);
 
         match res {
             Ok(_) => panic!("expected error"),
@@ -434,7 +434,7 @@ mod tests {
             budget_denom: String::from("ucosm"),
         };
 
-        init(deps.as_mut(), env.clone(), info.clone(), init_msg.clone()).unwrap();
+        init(deps.as_mut(), env.clone(), info.clone(), init_msg).unwrap();
 
         // insert proposals
         let msg = ExecuteMsg::CreateProposal {
@@ -443,7 +443,7 @@ mod tests {
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address1".to_string(),
         };
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
         let msg = ExecuteMsg::CreateProposal {
             title: String::from("proposal 2"),
@@ -451,7 +451,7 @@ mod tests {
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address2".to_string(),
         };
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
         let msg = ExecuteMsg::CreateProposal {
             title: String::from("proposal 3"),
@@ -459,21 +459,21 @@ mod tests {
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address3".to_string(),
         };
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
         let msg = ExecuteMsg::CreateProposal {
             title: String::from("proposal 4"),
             description: "".to_string(),
             metadata: Some(Binary::from(b"test")),
             fund_address: "fund_address4".to_string(),
         };
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
         // insert votes
         // proposal1
         let msg = ExecuteMsg::VoteProposal { proposal_id: 1 };
         let vote11_fund = 1200u128;
         let info = mock_info("address1", &[coin(vote11_fund, "ucosm")]);
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        let res = execute(deps.as_mut(), env.clone(), info, msg.clone());
         match res {
             Ok(_) => {}
             e => panic!("unexpected error, got {:?}", e),
@@ -481,10 +481,10 @@ mod tests {
 
         let vote12_fund = 44999u128;
         let info = mock_info("address2", &[coin(vote12_fund, "ucosm")]);
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info, msg.clone()).unwrap();
         let vote13_fund = 33u128;
         let info = mock_info("address3", &[coin(vote13_fund, "ucosm")]);
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info, msg).unwrap();
         let proposal1 = vote11_fund + vote12_fund + vote13_fund;
 
         // proposal2
@@ -492,49 +492,49 @@ mod tests {
 
         let vote21_fund = 30000u128;
         let info = mock_info("address4", &[coin(vote21_fund, "ucosm")]);
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        let res = execute(deps.as_mut(), env.clone(), info, msg.clone());
         match res {
             Ok(_) => {}
             e => panic!("unexpected error, got {:?}", e),
         }
         let vote22_fund = 58999u128;
         let info = mock_info("address5", &[coin(vote22_fund, "ucosm")]);
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info, msg).unwrap();
         let proposal2 = vote21_fund + vote22_fund;
 
         // proposal3
         let msg = ExecuteMsg::VoteProposal { proposal_id: 3 };
         let vote31_fund = 230000u128;
         let info = mock_info("address6", &[coin(vote31_fund, "ucosm")]);
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        let res = execute(deps.as_mut(), env.clone(), info, msg.clone());
         match res {
             Ok(_) => {}
             e => panic!("unexpected error, got {:?}", e),
         }
         let vote32_fund = 100u128;
         let info = mock_info("address7", &[coin(vote32_fund, "ucosm")]);
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env.clone(), info, msg).unwrap();
         let proposal3 = vote31_fund + vote32_fund;
 
         // proposal4
         let msg = ExecuteMsg::VoteProposal { proposal_id: 4 };
         let vote41_fund = 100000u128;
         let info = mock_info("address8", &[coin(vote41_fund, "ucosm")]);
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        let res = execute(deps.as_mut(), env.clone(), info, msg.clone());
         match res {
             Ok(_) => {}
             e => panic!("unexpected error, got {:?}", e),
         }
         let vote42_fund = 5u128;
         let info = mock_info("address9", &[coin(vote42_fund, "ucosm")]);
-        execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
+        execute(deps.as_mut(), env, info, msg).unwrap();
         let proposal4 = vote41_fund + vote42_fund;
 
         let trigger_msg = ExecuteMsg::TriggerDistribution {};
         let info = mock_info("admin", &[]);
         let mut env = mock_env();
         env.block.height += 1000;
-        let res = execute(deps.as_mut(), env.clone(), info, trigger_msg);
+        let res = execute(deps.as_mut(), env, info, trigger_msg);
 
         let expected_msgs: Vec<SubMsg<_>> = vec![
             SubMsg::new(CosmosMsg::Bank(BankMsg::Send {

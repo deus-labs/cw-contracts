@@ -100,8 +100,7 @@ mod tests {
             Err(err) => println!("{:?}", err),
         }
 
-        let msg3 = msg.clone();
-        match msg3.validate(env) {
+        match msg.validate(env) {
             Ok(_) => {}
             Err(err) => println!("{:?}", err),
         }

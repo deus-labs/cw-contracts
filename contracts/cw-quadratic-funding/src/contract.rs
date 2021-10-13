@@ -74,9 +74,9 @@ pub fn execute(
             fund_address,
         } => execute_create_proposal(deps, env, info, title, description, metadata, fund_address),
         ExecuteMsg::VoteProposal { proposal_id } => {
-            handle_vote_proposal(deps, env, info, proposal_id)
+            execute_vote_proposal(deps, env, info, proposal_id)
         }
-        ExecuteMsg::TriggerDistribution { .. } => handle_trigger_distribution(deps, env, info),
+        ExecuteMsg::TriggerDistribution { .. } => execute_trigger_distribution(deps, env, info),
     }
 }
 
@@ -125,7 +125,7 @@ pub fn execute_create_proposal(
     ]))
 }
 
-pub fn handle_vote_proposal(
+pub fn execute_vote_proposal(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -180,7 +180,7 @@ pub fn handle_vote_proposal(
     ]))
 }
 
-pub fn handle_trigger_distribution(
+pub fn execute_trigger_distribution(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,

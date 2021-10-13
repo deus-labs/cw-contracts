@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::matching::QuadraticFundingAlgorithm;
 use crate::state::Proposal;
-use cosmwasm_std::{Binary, Env, HumanAddr};
+use cosmwasm_std::{Binary, Env};
 use cw0::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: HumanAddr,
-    pub leftover_addr: HumanAddr,
-    pub create_proposal_whitelist: Option<Vec<HumanAddr>>,
-    pub vote_proposal_whitelist: Option<Vec<HumanAddr>>,
+    pub admin: String,
+    pub leftover_addr: String,
+    pub create_proposal_whitelist: Option<Vec<String>>,
+    pub vote_proposal_whitelist: Option<Vec<String>>,
     pub voting_period: Expiration,
     pub proposal_period: Expiration,
     pub budget_denom: String,
@@ -41,7 +41,7 @@ pub enum ExecuteMsg {
         title: String,
         description: String,
         metadata: Option<Binary>,
-        fund_address: HumanAddr,
+        fund_address: String,
     },
     VoteProposal {
         proposal_id: u64,

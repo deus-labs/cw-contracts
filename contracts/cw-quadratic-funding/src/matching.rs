@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use cosmwasm_std::CanonicalAddr;
+use cosmwasm_std::{CanonicalAddr, Addr};
 use integer_sqrt::IntegerSquareRoot;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -12,14 +12,14 @@ pub enum QuadraticFundingAlgorithm {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RawGrant {
-    pub addr: CanonicalAddr,
+    pub addr: String,
     pub funds: Vec<u128>,
     pub collected_vote_funds: u128,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalculatedGrant {
-    pub addr: CanonicalAddr,
+    pub addr: String,
     pub grant: u128,
     pub collected_vote_funds: u128,
 }
@@ -82,24 +82,24 @@ fn constrain_by_budget(grants: Vec<CalculatedGrant>, budget: u128) -> Vec<Calcul
 mod tests {
     use crate::matching::{calculate_clr, CalculatedGrant, RawGrant};
     use crate::state::Proposal;
-    use cosmwasm_std::CanonicalAddr;
+    use cosmwasm_std::{CanonicalAddr, Addr};
 
     #[test]
     fn test_clr_1() {
         let proposal1 = Proposal {
-            fund_address: CanonicalAddr(b"proposal1".to_vec().into()),
+            fund_address: "proposal1".to_string(),
             ..Default::default()
         };
         let proposal2 = Proposal {
-            fund_address: CanonicalAddr(b"proposal2".to_vec().into()),
+            fund_address: "proposal2".into(),
             ..Default::default()
         };
         let proposal3 = Proposal {
-            fund_address: CanonicalAddr(b"proposal3".to_vec().into()),
+            fund_address: "proposal3".into(),
             ..Default::default()
         };
         let proposal4 = Proposal {
-            fund_address: CanonicalAddr(b"proposal4".to_vec().into()),
+            fund_address: "proposal4".into(),
             ..Default::default()
         };
         let votes1 = vec![7200u128];
@@ -131,7 +131,7 @@ mod tests {
         ];
         let expected = vec![
             CalculatedGrant {
-                addr: proposal1.fund_address,
+                addr: proposal1.fund_address.clone(),
                 grant: 84737u128,
                 collected_vote_funds: 7200u128,
             },
@@ -157,7 +157,7 @@ mod tests {
                 assert_eq!(o.0, expected);
                 assert_eq!(o.1, 2)
             }
-            e => panic!("unexpected error, got {}", e.unwrap_err()),
+            e => panic!("unexpected error, got {:?}", e),
         }
     }
 
@@ -170,19 +170,19 @@ mod tests {
     #[test]
     fn test_clr_2() {
         let proposal1 = Proposal {
-            fund_address: CanonicalAddr(b"proposal1".to_vec().into()),
+            fund_address: "proposal1".to_string(),
             ..Default::default()
         };
         let proposal2 = Proposal {
-            fund_address: CanonicalAddr(b"proposal2".to_vec().into()),
+            fund_address: "proposal2".into(),
             ..Default::default()
         };
         let proposal3 = Proposal {
-            fund_address: CanonicalAddr(b"proposal3".to_vec().into()),
+            fund_address: "proposal3".into(),
             ..Default::default()
         };
         let proposal4 = Proposal {
-            fund_address: CanonicalAddr(b"proposal4".to_vec().into()),
+            fund_address: "proposal4".into(),
             ..Default::default()
         };
         let votes1 = vec![1200u128, 44999u128, 33u128];
@@ -240,7 +240,7 @@ mod tests {
                 assert_eq!(o.0, expected);
                 assert_eq!(o.1, 1)
             }
-            e => panic!("unexpected error, got {}", e.unwrap_err()),
+            e => panic!("unexpected error, got {:?}", e),
         }
     }
 }

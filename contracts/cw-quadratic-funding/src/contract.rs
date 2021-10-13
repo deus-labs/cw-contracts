@@ -1,14 +1,10 @@
-use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Binary, CanonicalAddr, CosmosMsg, Deps, DepsMut, Env,
-    Response, HumanAddr, MessageInfo, Order, StdResult,
-};
+use cosmwasm_std::{attr, coin, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, Response, MessageInfo, Order, StdResult, Addr};
 
 use crate::error::ContractError;
 use crate::helper::extract_budget_coin;
 use crate::matching::{calculate_clr, QuadraticFundingAlgorithm, RawGrant};
 use crate::msg::{AllProposalsResponse, ExecuteMsg, InitMsg, QueryMsg};
-use crate::state::{proposal_seq, Config, Proposal, Vote, CONFIG, PROPOSALS, VOTES};
-use cosmwasm_storage::nextval;
+use crate::state::{Config, Proposal, Vote, CONFIG, PROPOSALS, VOTES, PROPOSAL_SEQ};
 
 // Note, you can use StdResult in some functions where you do not
 // make use of the custom errors
@@ -20,26 +16,29 @@ pub fn init(
 ) -> Result<Response, ContractError> {
     msg.validate(env)?;
 
-    let budget = extract_budget_coin(info.sent_funds.as_slice(), &msg.budget_denom)?;
-    let mut create_proposal_whitelist: Option<Vec<CanonicalAddr>> = None;
-    let mut vote_proposal_whitelist: Option<Vec<CanonicalAddr>> = None;
+    let budget = extract_budget_coin(info.funds.as_slice(), &msg.budget_denom)?;
+    let mut create_proposal_whitelist: Option<Vec<String>> = None;
+    let mut vote_proposal_whitelist: Option<Vec<String>> = None;
     if let Some(pwl) = msg.create_proposal_whitelist {
         let mut tmp_wl = vec![];
         for w in pwl {
-            tmp_wl.push(deps.api.canonical_address(&w)?)
+            deps.api.addr_validate(&w)?;
+            tmp_wl.push(w);
         }
         create_proposal_whitelist = Some(tmp_wl);
     }
     if let Some(vwl) = msg.vote_proposal_whitelist {
         let mut tmp_wl = vec![];
         for w in vwl {
-            tmp_wl.push(deps.api.canonical_address(&w)?)
+            deps.api.addr_validate(&w)?;
+            tmp_wl.push(w);
         }
         vote_proposal_whitelist = Some(tmp_wl);
     }
+
     let cfg = Config {
-        admin: deps.api.canonical_address(&msg.admin)?,
-        leftover_addr: deps.api.canonical_address(&msg.leftover_addr)?,
+        admin: msg.admin,
+        leftover_addr: msg.leftover_addr,
         create_proposal_whitelist,
         vote_proposal_whitelist,
         voting_period: msg.voting_period,
@@ -48,6 +47,7 @@ pub fn init(
         budget,
     };
     CONFIG.save(deps.storage, &cfg)?;
+    PROPOSAL_SEQ.save(deps.storage, &0);
 
     Ok(Response::default())
 }
@@ -80,13 +80,13 @@ pub fn execute_create_proposal(
     title: String,
     description: String,
     metadata: Option<Binary>,
-    fund_address: HumanAddr,
+    fund_address: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
     // check whitelist
     if let Some(wl) = config.create_proposal_whitelist {
-        if !wl.contains(&deps.api.canonical_address(&info.sender)?) {
+        if !wl.contains(&info.sender.to_string()) {
             return Err(ContractError::Unauthorized {});
         }
     }
@@ -96,29 +96,27 @@ pub fn execute_create_proposal(
         return Err(ContractError::ProposalPeriodExpired {});
     }
 
-    let id = nextval(&mut proposal_seq(deps.storage))?;
+    // validate fund address
+    deps.api.addr_validate(fund_address.as_str())?;
+
+    let id = PROPOSAL_SEQ.load(deps.storage)? + 1;
+    PROPOSAL_SEQ.save(deps.storage, &id)?;
     let p = Proposal {
         id,
         title: title.clone(),
         description,
         metadata,
-        fund_address: deps.api.canonical_address(&fund_address)?,
+        fund_address,
         ..Default::default()
     };
     PROPOSALS.save(deps.storage, id.into(), &p)?;
 
-    let res = Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "create_proposal"),
-            attr("title", title),
-            attr("proposal_id", id),
-        ],
-        events: vec![],
-        data: Some(Binary::from(id.to_be_bytes())),
-    };
-
-    Ok(res)
+    Ok(Response::new()
+           .add_attributes(vec![            attr("action", "create_proposal"),
+                                            attr("title", title),
+                                            attr("proposal_id", id.to_string()),
+           ])
+    )
 }
 
 pub fn handle_vote_proposal(
@@ -131,7 +129,7 @@ pub fn handle_vote_proposal(
 
     // check whitelist
     if let Some(wl) = config.vote_proposal_whitelist {
-        if !wl.contains(&deps.api.canonical_address(&info.sender)?) {
+        if !wl.contains(&info.sender.to_string()) {
             return Err(ContractError::Unauthorized {});
         }
     }
@@ -142,7 +140,7 @@ pub fn handle_vote_proposal(
     }
 
     // validate sent funds and funding denom matches
-    let fund = extract_budget_coin(&info.sent_funds, &config.budget.denom)?;
+    let fund = extract_budget_coin(&info.funds, &config.budget.denom)?;
 
     // check existence of the proposal and collect funds in proposal
     let proposal = PROPOSALS.update(deps.storage, proposal_id.into(), |op| match op {
@@ -155,7 +153,7 @@ pub fn handle_vote_proposal(
 
     let vote = Vote {
         proposal_id,
-        voter: deps.api.canonical_address(&info.sender)?,
+        voter: info.sender.to_string(),
         fund,
     };
 
@@ -170,8 +168,8 @@ pub fn handle_vote_proposal(
 
     Ok(Response::new()
         .add_attributes(           vec![ attr("action", "vote_proposal"),
-                                    attr("proposal_key", proposal_id),
-                                    attr("voter", deps.api.human_address(&vote.voter)?),
+                                    attr("proposal_key", proposal_id.to_string()),
+                                    attr("voter", vote.voter),
                                     attr("collected_fund", proposal.collected_funds)]
         ))
 }
@@ -184,7 +182,7 @@ pub fn handle_trigger_distribution(
     let config = CONFIG.load(deps.storage)?;
 
     // only admin can trigger distribution
-    if deps.api.canonical_address(&info.sender)? != config.admin {
+    if info.sender != config.admin {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -229,13 +227,13 @@ pub fn handle_trigger_distribution(
     let mut msgs = vec![];
     for f in distr_funds {
         msgs.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: deps.api.human_address(&f.addr)?,
+            to_address: f.addr,
             amount: vec![coin(f.grant + f.collected_vote_funds, &config.budget.denom)],
         }));
     }
 
     let leftover_msg: CosmosMsg = CosmosMsg::Bank(BankMsg::Send {
-        to_address: deps.api.human_address(&config.leftover_addr)?,
+        to_address: config.leftover_addr,
         amount: vec![coin(leftover, config.budget.denom)],
     });
 
@@ -276,7 +274,7 @@ mod tests {
     use crate::msg::{AllProposalsResponse, ExecuteMsg, InitMsg};
     use crate::state::{Proposal, PROPOSALS};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coin, BankMsg, Binary, CosmosMsg, HumanAddr};
+    use cosmwasm_std::{coin, BankMsg, Binary, CosmosMsg, SubMsg};
     use cw0::Expiration;
 
     #[test]
@@ -286,8 +284,8 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let init_msg = InitMsg {
-            admin: HumanAddr::from("addr"),
-            leftover_addr: HumanAddr::from("addr"),
+            admin: "addr".to_string(),
+            leftover_addr: "addr".to_string(),
             create_proposal_whitelist: None,
             vote_proposal_whitelist: None,
             voting_period: Expiration::AtHeight(env.block.height + 15),
@@ -303,7 +301,7 @@ mod tests {
             title: String::from("test"),
             description: String::from("test"),
             metadata: Some(b"test".into()),
-            fund_address: HumanAddr::from("fund_address"),
+            fund_address: "fund_address".to_string(),
         };
 
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
@@ -319,9 +317,9 @@ mod tests {
         let info = mock_info("true", &[coin(1000, "ucosm")]);
         let mut deps = mock_dependencies(&[]);
         let init_msg = InitMsg {
-            leftover_addr: HumanAddr::from("addr"),
-            admin: HumanAddr::from("person"),
-            create_proposal_whitelist: Some(vec![HumanAddr::from("false")]),
+            leftover_addr: "addr".to_string(),
+            admin: "person".to_string(),
+            create_proposal_whitelist: Some(vec!["false".to_string()]),
             vote_proposal_whitelist: None,
             voting_period: Default::default(),
             proposal_period: Default::default(),
@@ -342,11 +340,11 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let mut init_msg = InitMsg {
-            leftover_addr: HumanAddr::from("addr"),
+            leftover_addr: "addr".to_string(),
             algorithm: QuadraticFundingAlgorithm::CapitalConstrainedLiberalRadicalism {
                 parameter: "".to_string(),
             },
-            admin: HumanAddr::from("addr"),
+            admin: "addr".to_string(),
             create_proposal_whitelist: None,
             vote_proposal_whitelist: None,
             voting_period: Expiration::AtHeight(env.block.height + 15),
@@ -359,7 +357,7 @@ mod tests {
             title: String::from("test"),
             description: String::from("test"),
             metadata: Some(Binary::from(b"test")),
-            fund_address: HumanAddr::from("fund_address"),
+            fund_address: "fund_address".to_string(),
         };
 
         let res = execute(
@@ -377,9 +375,9 @@ mod tests {
 
         // whitelist check
         let mut deps = mock_dependencies(&[]);
-        init_msg.vote_proposal_whitelist = Some(vec![HumanAddr::from("admin")]);
+        init_msg.vote_proposal_whitelist = Some(vec!["admin".to_string()]);
         init(deps.as_mut(), env.clone(), info.clone(), init_msg.clone()).unwrap();
-        let res = handle(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
         match res {
             Ok(_) => panic!("expected error"),
             Err(ContractError::Unauthorized {}) => {}
@@ -391,11 +389,11 @@ mod tests {
         init_msg.vote_proposal_whitelist = None;
         init(deps.as_mut(), env.clone(), info.clone(), init_msg.clone()).unwrap();
         env.block.height = env.block.height + 15;
-        let res = handle(deps.as_mut(), env.clone(), info.clone(), msg.clone());
+        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
 
         match res {
             Ok(_) => panic!("expected error"),
-            Err(ContractError::VotingPeriodExpired {}) => {}
+            Err(ContractError::VotingPeriodExpired {}) => {},
             e => panic!("unexpected error, got {:?}", e),
         }
     }
@@ -408,11 +406,11 @@ mod tests {
         let mut deps = mock_dependencies(&[]);
 
         let init_msg = InitMsg {
-            leftover_addr: HumanAddr::from("addr"),
+            leftover_addr: "addr".to_string(),
             algorithm: QuadraticFundingAlgorithm::CapitalConstrainedLiberalRadicalism {
                 parameter: "".to_string(),
             },
-            admin: HumanAddr::from("admin"),
+            admin: "admin".to_string(),
             create_proposal_whitelist: None,
             vote_proposal_whitelist: None,
             voting_period: Expiration::AtHeight(env.block.height + 15),
@@ -427,7 +425,7 @@ mod tests {
             title: String::from("proposal 1"),
             description: "".to_string(),
             metadata: Some(Binary::from(b"test")),
-            fund_address: HumanAddr::from("fund_address1"),
+            fund_address: "fund_address1".to_string(),
         };
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
         match res {
@@ -439,7 +437,7 @@ mod tests {
             title: String::from("proposal 2"),
             description: "".to_string(),
             metadata: Some(Binary::from(b"test")),
-            fund_address: HumanAddr::from("fund_address2"),
+            fund_address: "fund_address2".to_string(),
         };
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
         match res {
@@ -451,7 +449,7 @@ mod tests {
             title: String::from("proposal 3"),
             description: "".to_string(),
             metadata: Some(Binary::from(b"test")),
-            fund_address: HumanAddr::from("fund_address3"),
+            fund_address: "fund_address3".to_string(),
         };
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
         match res {
@@ -462,7 +460,7 @@ mod tests {
             title: String::from("proposal 4"),
             description: "".to_string(),
             metadata: Some(Binary::from(b"test")),
-            fund_address: HumanAddr::from("fund_address4"),
+            fund_address: "fund_address4".to_string(),
         };
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
         match res {
@@ -538,28 +536,28 @@ mod tests {
         env.block.height += 1000;
         let res = execute(deps.as_mut(), env.clone(), info, trigger_msg);
 
-        let expected_msgs: Vec<CosmosMsg<_>> = vec![
-            CosmosMsg::Bank(BankMsg::Send {
-                to_address: HumanAddr::from("fund_address1"),
+        let expected_msgs: Vec<SubMsg<_>> = vec![
+            SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+                to_address: "fund_address1".to_string(),
                 amount: vec![coin(106444u128, "ucosm")],
-            }),
-            CosmosMsg::Bank(BankMsg::Send {
-                to_address: HumanAddr::from("fund_address2"),
+            })),
+            SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+                to_address: "fund_address2".to_string(),
                 amount: vec![coin(253601u128, "ucosm")],
-            }),
-            CosmosMsg::Bank(BankMsg::Send {
-                to_address: HumanAddr::from("fund_address3"),
+            })),
+            SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+                to_address: "fund_address3".to_string(),
                 amount: vec![coin(458637u128, "ucosm")],
-            }),
-            CosmosMsg::Bank(BankMsg::Send {
-                to_address: HumanAddr::from("fund_address4"),
+            })),
+            SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+                to_address: "fund_address4".to_string(),
                 amount: vec![coin(196653u128, "ucosm")],
-            }),
+            })),
             // left over msg
-            CosmosMsg::Bank(BankMsg::Send {
-                to_address: HumanAddr::from("addr"),
+            SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+                to_address: "addr".to_string(),
                 amount: vec![coin(1u128, "ucosm")],
-            }),
+            })),
         ];
         match res {
             Ok(_) => {}
@@ -571,7 +569,7 @@ mod tests {
         // check total cash in and out
         let expected_msg_total_distr: u128 = expected_msgs
             .into_iter()
-            .map(|d| match d {
+            .map(|d| match d.msg {
                 CosmosMsg::Bank(BankMsg::Send { amount, .. }) => {
                     amount.iter().map(|c| c.amount.u128()).sum()
                 }

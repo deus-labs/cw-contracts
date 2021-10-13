@@ -1,10 +1,13 @@
-use cosmwasm_std::{attr, coin, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, Response, MessageInfo, Order, StdResult};
+use cosmwasm_std::{
+    attr, coin, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order,
+    Response, StdResult,
+};
 
 use crate::error::ContractError;
 use crate::helper::extract_budget_coin;
 use crate::matching::{calculate_clr, QuadraticFundingAlgorithm, RawGrant};
 use crate::msg::{AllProposalsResponse, ExecuteMsg, InitMsg, QueryMsg};
-use crate::state::{Config, Proposal, Vote, CONFIG, PROPOSALS, VOTES, PROPOSAL_SEQ};
+use crate::state::{Config, Proposal, Vote, CONFIG, PROPOSALS, PROPOSAL_SEQ, VOTES};
 
 // Note, you can use StdResult in some functions where you do not
 // make use of the custom errors
@@ -111,12 +114,11 @@ pub fn execute_create_proposal(
     };
     PROPOSALS.save(deps.storage, id.into(), &p)?;
 
-    Ok(Response::new()
-           .add_attributes(vec![            attr("action", "create_proposal"),
-                                            attr("title", title),
-                                            attr("proposal_id", id.to_string()),
-           ])
-    )
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "create_proposal"),
+        attr("title", title),
+        attr("proposal_id", id.to_string()),
+    ]))
 }
 
 pub fn handle_vote_proposal(
@@ -166,12 +168,12 @@ pub fn handle_vote_proposal(
     // save vote
     vote_key.save(deps.storage, &vote)?;
 
-    Ok(Response::new()
-        .add_attributes(           vec![ attr("action", "vote_proposal"),
-                                    attr("proposal_key", proposal_id.to_string()),
-                                    attr("voter", vote.voter),
-                                    attr("collected_fund", proposal.collected_funds)]
-        ))
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "vote_proposal"),
+        attr("proposal_key", proposal_id.to_string()),
+        attr("voter", vote.voter),
+        attr("collected_fund", proposal.collected_funds),
+    ]))
 }
 
 pub fn handle_trigger_distribution(
@@ -311,7 +313,6 @@ mod tests {
         env.block.height = env.block.height + 1000;
         execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
 
-
         // unauthorised
         let env = mock_env();
         let info = mock_info("true", &[coin(1000, "ucosm")]);
@@ -365,7 +366,8 @@ mod tests {
             env.clone(),
             info.clone(),
             create_proposal_msg.clone(),
-        ).unwrap();
+        )
+        .unwrap();
 
         let msg = ExecuteMsg::VoteProposal { proposal_id: 1 };
         let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone()).unwrap();
@@ -393,7 +395,7 @@ mod tests {
 
         match res {
             Ok(_) => panic!("expected error"),
-            Err(ContractError::VotingPeriodExpired {}) => {},
+            Err(ContractError::VotingPeriodExpired {}) => {}
             e => panic!("unexpected error, got {:?}", e),
         }
     }

@@ -82,7 +82,6 @@ fn constrain_by_budget(grants: Vec<CalculatedGrant>, budget: u128) -> Vec<Calcul
 mod tests {
     use crate::matching::{calculate_clr, CalculatedGrant, RawGrant};
     use crate::state::Proposal;
-    
 
     #[test]
     fn test_clr_1() {

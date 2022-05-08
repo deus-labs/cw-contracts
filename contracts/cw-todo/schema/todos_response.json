@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TodosResponse",
+  "type": "object",
+  "required": [
+    "todos"
+  ],
+  "properties": {
+    "todos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Todo"
+      }
+    }
+  },
+  "definitions": {
+    "Status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "COMPLETED"
+      ]
+    },
+    "Todo": {
+      "type": "object",
+      "required": [
+        "description",
+        "id",
+        "status"
+      ],
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "status": {
+          "$ref": "#/definitions/Status"
+        }
+      }
+    }
+  }
+}

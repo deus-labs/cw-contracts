@@ -2,7 +2,7 @@
 FROM cosmwasm/wasmd:v0.18.0 as wasmd
 
 ### rust-optimizer ###
-FROM cosmwasm/rust-optimizer:0.11.5 as rust-optimizer
+FROM cosmwasm/rust-optimizer:0.12.6 as rust-optimizer
 
 FROM gitpod/workspace-full:latest
 

@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Uint128, Uint64};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -27,14 +27,14 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ReceiveMsg {
     // Send sends token to an id with defined pot
-    Send { id: Uint128 },
+    Send { id: Uint64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // GetPot returns pot with given id
-    GetPot { id: Uint128 },
+    GetPot { id: Uint64 },
 }
 
 // We define a custom struct for each query response

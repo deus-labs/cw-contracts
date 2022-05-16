@@ -1,6 +1,6 @@
 [package]
 name = "cw20-pot"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Orkun Külçe <orkunkl@users.noreply.github.com>"]
 edition = "2018"
 
@@ -36,18 +36,18 @@ library = []
 optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.0
+  cosmwasm/rust-optimizer:0.12.6
 """
 
 [dependencies]
-cosmwasm-std = { version = "0.16.2" }
-cosmwasm-storage = { version = "0.16.2" }
-cw-storage-plus = "0.8.1"
-cw2 = "0.8.1"
-cw20 = "0.8.1"
-schemars = "0.8.3"
-serde = { version = "1.0.127", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.26" }
+cosmwasm-std = "1.0.0"
+cosmwasm-storage = "1.0.0"
+cw-storage-plus = "0.13.2"
+cw2 = "0.13.2"
+cw20 = "0.13.2"
+schemars = "0.8.8"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.31" }
 
 [dev-dependencies]
-cosmwasm-schema = { version = "0.16.0" }
+cosmwasm-schema = { version = "1.0.0" }

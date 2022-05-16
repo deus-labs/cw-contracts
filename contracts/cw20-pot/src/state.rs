@@ -1,8 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, DepsMut, StdResult, Uint128};
-use cw_storage_plus::{Item, Map, U128Key};
+use cosmwasm_std::{Addr, DepsMut, StdResult, Uint128, Uint64};
+use cw_storage_plus::{Item, Map};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -22,15 +22,15 @@ pub struct Pot {
     pub collected: Uint128,
 }
 /// POT_SEQ holds the last pot ID
-pub const POT_SEQ: Item<Uint128> = Item::new("pot_seq");
-pub const POTS: Map<U128Key, Pot> = Map::new("pot");
+pub const POT_SEQ: Item<u64> = Item::new("pot_seq");
+pub const POTS: Map<u64, Pot> = Map::new("pot");
 
 pub fn save_pot(deps: DepsMut, pot: &Pot) -> StdResult<()> {
     // increment id if exists, or return 1
     let id = POT_SEQ.load(deps.storage)?;
-    let id = id.checked_add(Uint128::new(1))?;
+    let id = Uint64::new(id).checked_add(Uint64::new(1))?.u64();
     POT_SEQ.save(deps.storage, &id)?;
 
     // save pot with id
-    POTS.save(deps.storage, id.u128().into(), pot)
+    POTS.save(deps.storage, id, pot)
 }

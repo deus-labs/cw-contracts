@@ -21,7 +21,7 @@ workflows:
 jobs:
   simple-option:
     docker:
-      - image: rust:1.51.0
+      - image: rust:1.58.1
     working_directory: ~/project/contracts/simple-option
     steps:
       - checkout:
@@ -31,7 +31,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-simple-option-rust:1.51.0-{{ checksum "Cargo.lock" }}
+            - cargocache-simple-option-rust:1.58.1-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -67,10 +67,10 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-simple-option-rust:1.51.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-simple-option-rust:1.58.1-{{ checksum "Cargo.lock" }}
   erc20:
     docker:
-      - image: rust:1.51.0
+      - image: rust:1.58.1
     working_directory: ~/project/contracts/erc20
     steps:
       - checkout:
@@ -80,7 +80,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-erc20-rust:1.51.0-{{ checksum "Cargo.lock" }}
+            - cargocache-erc20-rust:1.58.1-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -116,10 +116,10 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-erc20-rust:1.51.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-erc20-rust:1.58.1-{{ checksum "Cargo.lock" }}
   escrow:
     docker:
-      - image: rust:1.51.0
+      - image: rust:1.58.1
     working_directory: ~/project/contracts/escrow
     steps:
       - checkout:
@@ -129,7 +129,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-escrow-rust:1.47.0-{{ checksum "Cargo.lock" }}
+            - cargocache-escrow-rust:1.58.1-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -168,10 +168,10 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-escrow-rust:1.47.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-escrow-rust:1.58.1-{{ checksum "Cargo.lock" }}
   nameservice:
     docker:
-      - image: rust:1.51.0
+      - image: rust:1.58.1
     working_directory: ~/project/contracts/nameservice
     steps:
       - checkout:
@@ -181,7 +181,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-nameservice-rust:1.51.0-{{ checksum "Cargo.lock" }}
+            - cargocache-nameservice-rust:1.58.1-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -217,10 +217,10 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-nameservice-rust:1.51.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-nameservice-rust:1.58.1-{{ checksum "Cargo.lock" }}
   voting:
     docker:
-      - image: rust:1.51.0
+      - image: rust:1.58.1
     working_directory: ~/project/contracts/voting
     steps:
       - checkout:
@@ -230,7 +230,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-voting-rust:1.51.0-{{ checksum "Cargo.lock" }}
+            - cargocache-voting-rust:1.58.1-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -266,10 +266,10 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-voting-rust:1.51.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-voting-rust:1.58.1-{{ checksum "Cargo.lock" }}
   cw20-pot:
     docker:
-      - image: rust:1.51.0
+      - image: rust:1.58.1
     working_directory: ~/project/contracts/cw20-pot
     steps:
       - checkout:
@@ -279,7 +279,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-cw20-pot-rust:1.51.0-{{ checksum "Cargo.lock" }}
+            - cargocache-cw20-pot-rust:1.58.1-{{ checksum "Cargo.lock" }}
       - run:
           name: Add wasm32 target
           command: rustup target add wasm32-unknown-unknown
@@ -315,7 +315,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-cw20-pot-rust:1.51.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-cw20-pot-rust:1.58.1-{{ checksum "Cargo.lock" }}
   # This job is based in cosmwasm-plus/.circleci/config.yml
   build_and_upload_contracts:
     docker:
@@ -338,7 +338,7 @@ jobs:
       - run:
           name: Build development contracts
           command: |
-            docker run --volumes-from with_code cosmwasm/rust-optimizer:0.10.8 ./contracts/*/
+            docker run --volumes-from with_code cosmwasm/rust-optimizer:0.12.6 ./contracts/*/
 
             docker cp with_code:/code/artifacts ./artifacts
       - run:

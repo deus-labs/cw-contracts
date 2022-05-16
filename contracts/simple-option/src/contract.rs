@@ -4,7 +4,7 @@ use cosmwasm_std::{
 
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{config, config_read, State};
+use crate::state::{State, CONFIG};
 
 #[entry_point]
 pub fn instantiate(
@@ -27,7 +27,7 @@ pub fn instantiate(
         expires: msg.expires,
     };
 
-    config(deps.storage).save(&state)?;
+    CONFIG.save(deps.storage, &state)?;
 
     Ok(Response::default())
 }
@@ -53,14 +53,14 @@ pub fn execute_transfer(
     recipient: String,
 ) -> Result<Response, ContractError> {
     // ensure msg sender is the owner
-    let mut state = config(deps.storage).load()?;
+    let mut state = CONFIG.load(deps.storage)?;
     if info.sender != state.owner {
         return Err(ContractError::Unauthorized {});
     }
 
     // set new owner on state
     state.owner = deps.api.addr_validate(&recipient)?;
-    config(deps.storage).save(&state)?;
+    CONFIG.save(deps.storage, &state)?;
 
     let res =
         Response::new().add_attributes([("action", "transfer"), ("owner", recipient.as_str())]);
@@ -73,7 +73,7 @@ pub fn execute_execute(
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
     // ensure msg sender is the owner
-    let state = config(deps.storage).load()?;
+    let state = CONFIG.load(deps.storage)?;
     if info.sender != state.owner {
         return Err(ContractError::Unauthorized {});
     }
@@ -107,7 +107,7 @@ pub fn execute_execute(
     });
 
     // delete the option
-    config(deps.storage).remove();
+    CONFIG.remove(deps.storage);
 
     res = res.add_attribute("action", "execute");
     Ok(res)
@@ -115,7 +115,7 @@ pub fn execute_execute(
 
 pub fn execute_burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     // ensure is expired
-    let state = config(deps.storage).load()?;
+    let state = CONFIG.load(deps.storage)?;
     if env.block.height < state.expires {
         return Err(ContractError::OptionNotExpired {
             expires: state.expires,
@@ -135,7 +135,7 @@ pub fn execute_burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
     });
 
     // delete the option
-    config(deps.storage).remove();
+    CONFIG.remove(deps.storage);
 
     res = res.add_attribute("action", "burn");
     Ok(res)
@@ -149,7 +149,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
-    let state = config_read(deps.storage).load()?;
+    let state = CONFIG.load(deps.storage)?;
     Ok(state)
 }
 

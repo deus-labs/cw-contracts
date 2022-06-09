@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "new_entry"
+      ],
+      "properties": {
+        "new_entry": {
+          "type": "object",
+          "required": [
+            "description"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "priority": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Priority"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "update_entry"
+      ],
+      "properties": {
+        "update_entry": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "priority": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Priority"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Status"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "delete_entry"
+      ],
+      "properties": {
+        "delete_entry": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Priority": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Low",
+        "Medium",
+        "High"
+      ]
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "ToDo",
+        "InProgress",
+        "Done",
+        "Cancelled"
+      ]
+    }
+  }
+}

@@ -47,13 +47,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::NewEntry {description, priority} => create_new_entry(deps, info, description, priority),
-        ExecuteMsg::UpdateEntry {id, description, status, priority } => update_entry(deps, info, id, description, status, priority),
-        ExecuteMsg::DeleteEntry {id} => delete_entry(deps, info, id)
+        ExecuteMsg::NewEntry {description, priority} => execute_create_new_entry(deps, info, description, priority),
+        ExecuteMsg::UpdateEntry {id, description, status, priority } => execute_update_entry(deps, info, id, description, status, priority),
+        ExecuteMsg::DeleteEntry {id} => execute_delete_entry(deps, info, id)
     }
 }
 
-pub fn create_new_entry(deps: DepsMut, info: MessageInfo, description: String, priority: Option<Priority>) -> Result<Response, ContractError> {
+pub fn execute_create_new_entry(deps: DepsMut, info: MessageInfo, description: String, priority: Option<Priority>) -> Result<Response, ContractError> {
     let owner = CONFIG.load(deps.storage)?.owner;
     if info.sender != owner {
         return Err(ContractError::Unauthorized {});
@@ -68,11 +68,11 @@ pub fn create_new_entry(deps: DepsMut, info: MessageInfo, description: String, p
         status: Status::ToDo
     };
     LIST.save(deps.storage, id, &new_entry)?;
-    Ok(Response::new().add_attribute("method", "create_new_entry")
+    Ok(Response::new().add_attribute("method", "execute_create_new_entry")
         .add_attribute("new_entry_id", id.to_string()))
 }
 
-pub fn update_entry(deps: DepsMut, info: MessageInfo, id: u64, description: Option<String>, status: Option<Status>, priority: Option<Priority>) -> Result<Response, ContractError> {
+pub fn execute_update_entry(deps: DepsMut, info: MessageInfo, id: u64, description: Option<String>, status: Option<Status>, priority: Option<Priority>) -> Result<Response, ContractError> {
     let owner = CONFIG.load(deps.storage)?.owner;
     if info.sender != owner {
         return Err(ContractError::Unauthorized {});
@@ -86,18 +86,18 @@ pub fn update_entry(deps: DepsMut, info: MessageInfo, id: u64, description: Opti
         priority: priority.unwrap_or(entry.priority),
     };
     LIST.save(deps.storage, id, &updated_entry)?;
-    Ok(Response::new().add_attribute("method", "update_entry")
+    Ok(Response::new().add_attribute("method", "execute_update_entry")
                       .add_attribute("updated_entry_id", id.to_string()))
 }
 
-pub fn delete_entry(deps: DepsMut, info: MessageInfo, id: u64) -> Result<Response, ContractError> {
+pub fn execute_delete_entry(deps: DepsMut, info: MessageInfo, id: u64) -> Result<Response, ContractError> {
     let owner = CONFIG.load(deps.storage)?.owner;
     if info.sender != owner {
         return Err(ContractError::Unauthorized {});
     }
 
     LIST.remove(deps.storage, id);
-    Ok(Response::new().add_attribute("method", "delete_entry")
+    Ok(Response::new().add_attribute("method", "execute_delete_entry")
                       .add_attribute("deleted_entry_id", id.to_string()))
 }
 

@@ -9,6 +9,11 @@ repository = "https://github.com/CosmWasm/cosmwasm-examples"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+exclude = [
+  "contract.wasm",
+  "hash.txt",
+]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -25,14 +30,22 @@ overflow-checks = true
 
 [features]
 backtraces = ["cosmwasm-std/backtraces"]
+library = []
 
 [dependencies]
-cosmwasm-std = "1.0.0-beta"
+cw-utils = "0.13.2"
+cw2 = "0.13.2"
+cw20 = "0.13.2"
+cosmwasm-std = "1.0.0-beta8"
 cosmwasm-storage = "1.0.0-beta"
-schemars = "0.8"
-thiserror = "1.0.23"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+cw-storage-plus = "0.13.2"
+schemars = "0.8.8"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+thiserror = "1.0.31"
+hex = "0.4"
+sha2 = { version = "0.9.9", default-features = false }
 
 [dev-dependencies]
+cosmwasm-schema = "1.0.0-beta8"
+serde_json = "1.0"
 cosmwasm-vm = "1.0.0-beta"
-cosmwasm-schema = "1.0.0-beta"

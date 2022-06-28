@@ -1,4 +1,5 @@
 use cosmwasm_std::{Addr, Coin};
+use cw_utils::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,11 +9,11 @@ pub struct InstantiateMsg {
     pub recipient: String,
     /// When end height set and block height exceeds this value, the escrow is expired.
     /// Once an escrow is expired, it can be returned to the original funder (via "refund").
-    pub end_height: Option<u64>,
+    ///
     /// When end time (in seconds since epoch 00:00:00 UTC on 1 January 1970) is set and
     /// block time exceeds this value, the escrow is expired.
     /// Once an escrow is expired, it can be returned to the original funder (via "refund").
-    pub end_time: Option<u64>,
+    pub expiration: Option<Expiration>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr};
+use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -21,14 +21,14 @@ pub enum Status {
     ToDo,
     InProgress,
     Done,
-    Cancelled
+    Cancelled,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum Priority {
     None,
     Low,
     Medium,
-    High
+    High,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");

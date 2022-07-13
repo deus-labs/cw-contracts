@@ -18,12 +18,11 @@ and a precompiled wasm ready for deployment called `contract.wasm`.
 
 Take a look here:
 
-* [escrow](https://github.com/CosmWasm/cw-examples/tree/main/contracts/escrow) - A basic escrow with timeout and partial release
-* [erc20](https://github.com/CosmWasm/cw-examples/tree/main/contracts/erc20) - Basic implementation the erc20 interface for CosmWasm, as a base for token designers
-* [nameservice](https://github.com/CosmWasm/cw-examples/tree/main/contracts/nameservice) - Simple name service application to buy names and map values to those names
-* [voting](https://github.com/CosmWasm/cw-examples/tree/main/contracts/voting) - An example voting contract to create, manage, vote and deposit on polls
-* [simple-option](https://github.com/CosmWasm/cw-examples/tree/main/contracts/simple-option) - A contract that replicates options in finance
-* [cw20-pot](https://github.com/CosmWasm/cw-examples/tree/main/contracts/cw20-pot) - Basic smart contract using cw20 contact
+* [escrow](https://github.com/InterWasm/cw-contracts/tree/main/contracts/escrow) - A basic escrow with timeout and partial release
+* [nameservice](https://github.com/InterWasm/cw-contracts/tree/main/contracts/nameservice) - Simple name service application to buy names and map values to those names
+* [voting](https://github.com/InterWasm/cw-contracts/tree/main/contracts/voting) - An example voting contract to create, manage, vote and deposit on polls
+* [simple-option](https://github.com/InterWasm/cw-contracts/tree/main/contracts/simple-option) - A contract that replicates options in finance
+* [cw20-pot](https://github.com/InterWasm/cw-contracts/tree/main/contracts/cw20-pot) - Basic smart contract using cw20 contact
 
 You can get more info from `README.md` file in each of the contacts.
 

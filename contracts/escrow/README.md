@@ -26,5 +26,5 @@ to the world, once you are ready to deploy it on a running blockchain. And
 [Importing](./Importing.md) contains information about pulling in other contracts or crates
 that have been published.
 
-But more than anything, there is an [online tutorial](https://www.cosmwasm.com/docs/getting-started/intro),
+But more than anything, there is an [online tutorial](https://docs.cosmwasm.com/tutorials/hijack-escrow/hack-contract#a-walk-through-of-the-escrow-contract),
 which leads you step-by-step on how to modify this particular contract.

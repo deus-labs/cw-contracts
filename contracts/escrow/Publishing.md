@@ -16,7 +16,7 @@ You will want entries like the following in `Cargo.toml`:
 name = "cw-escrow"
 version = "0.1.0"
 description = "Simple CosmWasm contract for an escrow with arbiter and timeout"
-repository = "https://github.com/CosmWasm/cosmwasm-examples"
+repository = "https://github.com/InterWasm/cw-contracts"
 ```
 
 You will also want to add a valid [SPDX license statement](https://spdx.org/licenses/),

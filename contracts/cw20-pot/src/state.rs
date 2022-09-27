@@ -1,10 +1,8 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use cosmwasm_std::{Addr, DepsMut, StdResult, Uint128, Uint64};
 use cw_storage_plus::{Item, Map};
+use cosmwasm_schema::cw_serde;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Config {
     pub owner: Addr,
     pub cw20_addr: Addr,
@@ -12,7 +10,7 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Pot {
     /// target_addr is the address that will receive the pot
     pub target_addr: Addr,

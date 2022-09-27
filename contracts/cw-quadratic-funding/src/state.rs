@@ -1,12 +1,10 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use crate::matching::QuadraticFundingAlgorithm;
 use cosmwasm_std::{Binary, Coin, Uint128};
 use cw0::Expiration;
-use cw_storage_plus::{Item, Map, U64Key};
+use cw_storage_plus::{Item, Map};
+use cosmwasm_schema::cw_serde;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Config {
     // set admin as single address, multisig or contract sig could be used
     pub admin: String,
@@ -22,7 +20,8 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
+#[derive(Default)]
 pub struct Proposal {
     pub id: u64,
     pub title: String,
@@ -32,14 +31,14 @@ pub struct Proposal {
     pub collected_funds: Uint128,
 }
 
-pub const PROPOSALS: Map<U64Key, Proposal> = Map::new("proposal");
+pub const PROPOSALS: Map<u64, Proposal> = Map::new("proposal");
 pub const PROPOSAL_SEQ: Item<u64> = Item::new("proposal_seq");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Vote {
     pub proposal_id: u64,
     pub voter: String,
     pub fund: Coin,
 }
 
-pub const VOTES: Map<(U64Key, &[u8]), Vote> = Map::new("votes");
+pub const VOTES: Map<(u64, &[u8]), Vote> = Map::new("votes");

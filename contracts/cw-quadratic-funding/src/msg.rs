@@ -3,12 +3,10 @@ use crate::matching::QuadraticFundingAlgorithm;
 use crate::state::Proposal;
 use cosmwasm_std::{Binary, Env};
 use cw0::Expiration;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admin: String,
     pub leftover_addr: String,
     pub create_proposal_whitelist: Option<Vec<String>>,
@@ -19,7 +17,7 @@ pub struct InitMsg {
     pub algorithm: QuadraticFundingAlgorithm,
 }
 
-impl InitMsg {
+impl InstantiateMsg {
     pub fn validate(&self, env: Env) -> Result<(), ContractError> {
         // check if proposal period is expired
         if self.proposal_period.is_expired(&env.block) {
@@ -34,8 +32,7 @@ impl InitMsg {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     CreateProposal {
         title: String,
@@ -49,14 +46,16 @@ pub enum ExecuteMsg {
     TriggerDistribution {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(Proposal)]
     ProposalByID { id: u64 },
+    #[returns(AllProposalsResponse)]
     AllProposals {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct AllProposalsResponse {
     pub proposals: Vec<Proposal>,
 }
@@ -71,7 +70,7 @@ mod tests {
         let mut env = mock_env();
 
         env.block.height = 30;
-        let msg = InitMsg {
+        let msg = InstantiateMsg {
             admin: Default::default(),
             leftover_addr: Default::default(),
             create_proposal_whitelist: None,

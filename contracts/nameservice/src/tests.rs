@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn proper_init_no_fees() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
 
         mock_init_no_price(deps.as_mut());
 
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn proper_init_with_fees() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
 
         mock_init_with_price(deps.as_mut(), coin(3, "token"), coin(4, "token"));
 
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn register_available_name_and_query_works() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_no_price(deps.as_mut());
         mock_alice_registers_name(deps.as_mut(), &[]);
 
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn register_available_name_and_query_works_with_fees() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_with_price(deps.as_mut(), coin(2, "token"), coin(2, "token"));
         mock_alice_registers_name(deps.as_mut(), &coins(2, "token"));
 
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn fails_on_register_already_taken_name() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_no_price(deps.as_mut());
         mock_alice_registers_name(deps.as_mut(), &[]);
 
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn register_available_name_fails_with_invalid_name() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_no_price(deps.as_mut());
         let info = mock_info("bob_key", &coins(2, "token"));
 
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn fails_on_register_insufficient_fees() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_with_price(deps.as_mut(), coin(2, "token"), coin(2, "token"));
 
         // anyone can register an available name with sufficient fees
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn fails_on_register_wrong_fee_denom() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_with_price(deps.as_mut(), coin(2, "token"), coin(2, "token"));
 
         // anyone can register an available name with sufficient fees
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn transfer_works() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_no_price(deps.as_mut());
         mock_alice_registers_name(deps.as_mut(), &[]);
 
@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn transfer_works_with_fees() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_with_price(deps.as_mut(), coin(2, "token"), coin(2, "token"));
         mock_alice_registers_name(deps.as_mut(), &coins(2, "token"));
 
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn fails_on_transfer_non_existent() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_no_price(deps.as_mut());
         mock_alice_registers_name(deps.as_mut(), &[]);
 
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn fails_on_transfer_from_nonowner() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_no_price(deps.as_mut());
         mock_alice_registers_name(deps.as_mut(), &[]);
 
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn fails_on_transfer_insufficient_fees() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_init_with_price(deps.as_mut(), coin(2, "token"), coin(5, "token"));
         mock_alice_registers_name(deps.as_mut(), &coins(2, "token"));
 
@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn returns_empty_on_query_unregistered_name() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
 
         mock_init_no_price(deps.as_mut());
 

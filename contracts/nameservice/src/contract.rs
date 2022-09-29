@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use crate::coin_helpers::assert_sent_sufficient_coin;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ResolveRecordResponse};
-use crate::state::{config, config_read, resolver, resolver_read, Config, NameRecord};
+use crate::state::{Config, NameRecord, NAME_RESOLVER, CONFIG};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
@@ -17,12 +17,11 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, StdError> {
-    let config_state = Config {
+    let config = Config {
         purchase_price: msg.purchase_price,
         transfer_price: msg.transfer_price,
     };
-
-    config(deps.storage).save(&config_state)?;
+    CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::default())
 }
@@ -48,19 +47,19 @@ pub fn execute_register(
 ) -> Result<Response, ContractError> {
     // we only need to check here - at point of registration
     validate_name(&name)?;
-    let config_state = config(deps.storage).load()?;
-    assert_sent_sufficient_coin(&info.funds, config_state.purchase_price)?;
+    let config = CONFIG.load(deps.storage)?;
+    assert_sent_sufficient_coin(&info.funds, config.purchase_price)?;
 
     let key = name.as_bytes();
     let record = NameRecord { owner: info.sender };
 
-    if (resolver(deps.storage).may_load(key)?).is_some() {
+    if (NAME_RESOLVER.may_load(deps.storage, key)?).is_some() {
         // name is already taken
         return Err(ContractError::NameTaken { name });
     }
 
     // name is available
-    resolver(deps.storage).save(key, &record)?;
+    NAME_RESOLVER.save(deps.storage, key, &record)?;
 
     Ok(Response::default())
 }
@@ -72,12 +71,12 @@ pub fn execute_transfer(
     name: String,
     to: String,
 ) -> Result<Response, ContractError> {
-    let config_state = config(deps.storage).load()?;
-    assert_sent_sufficient_coin(&info.funds, config_state.transfer_price)?;
+    let config = CONFIG.load(deps.storage)?;
+    assert_sent_sufficient_coin(&info.funds, config.transfer_price)?;
 
     let new_owner = deps.api.addr_validate(&to)?;
     let key = name.as_bytes();
-    resolver(deps.storage).update(key, |record| {
+    NAME_RESOLVER.update(deps.storage, key, |record| {
         if let Some(mut record) = record {
             if info.sender != record.owner {
                 return Err(ContractError::Unauthorized {});
@@ -96,14 +95,14 @@ pub fn execute_transfer(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ResolveRecord { name } => query_resolver(deps, env, name),
-        QueryMsg::Config {} => to_binary(&config_read(deps.storage).load()?),
+        QueryMsg::Config {} => to_binary(&CONFIG.load(deps.storage)?),
     }
 }
 
 fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
     let key = name.as_bytes();
 
-    let address = match resolver_read(deps.storage).may_load(key)? {
+    let address = match NAME_RESOLVER.may_load(deps.storage, key)? {
         Some(record) => Some(String::from(&record.owner)),
         None => None,
     };

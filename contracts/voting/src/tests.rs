@@ -3,12 +3,9 @@ mod tests {
     use crate::contract::{execute, instantiate, query, VOTING_TOKEN};
     use crate::error::ContractError;
     use crate::msg::{ExecuteMsg, InstantiateMsg, PollResponse, QueryMsg};
-    use crate::state::{config_read, PollStatus, State};
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        attr, coins, from_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
-        Response, StdError, Timestamp, Uint128,
-    };
+    use crate::state::{CONFIG, PollStatus, State};
+    use cosmwasm_std::testing::{mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info};
+    use cosmwasm_std::{attr, coins, from_binary, Addr, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, StdError, Timestamp, Uint128, SubMsg};
 
     const DEFAULT_END_HEIGHT: u64 = 100800u64;
     const TEST_CREATOR: &str = "creator";
@@ -41,14 +38,14 @@ mod tests {
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
 
         let msg = init_msg();
         let info = mock_info(TEST_CREATOR, &coins(2, VOTING_TOKEN));
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
-        let state = config_read(&mut deps.storage).load().unwrap();
+        let state = CONFIG.load(&mut deps.storage).unwrap();
         assert_eq!(
             state,
             State {
@@ -62,7 +59,7 @@ mod tests {
 
     #[test]
     fn poll_not_found() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Poll { poll_id: 1 });
@@ -76,7 +73,7 @@ mod tests {
 
     #[test]
     fn fails_create_poll_invalid_quorum_percentage() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         let info = mock_info("voter", &coins(11, VOTING_TOKEN));
 
         let qp = 101;
@@ -95,7 +92,7 @@ mod tests {
 
     #[test]
     fn fails_create_poll_invalid_description() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
 
         let msg = create_poll_msg(30, "a".to_string(), None, None);
@@ -137,7 +134,7 @@ mod tests {
 
     #[test]
     fn happy_days_create_poll() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
@@ -158,7 +155,7 @@ mod tests {
 
     #[test]
     fn create_poll_no_quorum() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
@@ -179,7 +176,7 @@ mod tests {
 
     #[test]
     fn fails_end_poll_before_end_height() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
@@ -220,7 +217,7 @@ mod tests {
         const POLL_ID: u64 = 1;
         let stake_amount = 1000;
 
-        let mut deps = mock_dependencies(&coins(1000, VOTING_TOKEN));
+        let mut deps = mock_dependencies_with_balance(&coins(1000, VOTING_TOKEN));
         mock_instantiate(deps.as_mut());
         let (mut creator_env, creator_info) = mock_info_height(
             TEST_CREATOR,
@@ -272,7 +269,7 @@ mod tests {
             execute_res.attributes,
             vec![
                 attr("action", "vote_casted"),
-                attr("poll_id", POLL_ID),
+                attr("poll_id", POLL_ID.to_string()),
                 attr("weight", "1000"),
                 attr("voter", TEST_VOTER),
             ]
@@ -306,7 +303,7 @@ mod tests {
 
     #[test]
     fn end_poll_zero_quorum() {
-        let mut deps = mock_dependencies(&coins(1000, VOTING_TOKEN));
+        let mut deps = mock_dependencies_with_balance(&coins(1000, VOTING_TOKEN));
         mock_instantiate(deps.as_mut());
         let (mut env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 1000, 10000);
 
@@ -336,7 +333,7 @@ mod tests {
 
     #[test]
     fn end_poll_quorum_rejected() {
-        let mut deps = mock_dependencies(&coins(100, VOTING_TOKEN));
+        let mut deps = mock_dependencies_with_balance(&coins(100, VOTING_TOKEN));
         mock_instantiate(deps.as_mut());
         let (mut creator_env, creator_info) =
             mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 0);
@@ -421,7 +418,7 @@ mod tests {
     fn end_poll_nay_rejected() {
         let voter1_stake = 100;
         let voter2_stake = 1000;
-        let mut deps = mock_dependencies(&coins(voter1_stake, VOTING_TOKEN));
+        let mut deps = mock_dependencies_with_balance(&coins(voter1_stake, VOTING_TOKEN));
         mock_instantiate(deps.as_mut());
         let (mut creator_env, creator_info) =
             mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 0);
@@ -505,7 +502,7 @@ mod tests {
 
     #[test]
     fn fails_end_poll_before_start_height() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
@@ -543,7 +540,7 @@ mod tests {
 
     #[test]
     fn fails_cast_vote_not_enough_staked() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
 
@@ -578,7 +575,7 @@ mod tests {
 
     #[test]
     fn happy_days_cast_vote() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
@@ -618,7 +615,7 @@ mod tests {
 
     #[test]
     fn happy_days_withdraw_voting_tokens() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::StakeVotingTokens {};
@@ -627,7 +624,7 @@ mod tests {
         let execute_res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
         assert_stake_tokens_result(11, None, execute_res, deps.as_mut());
 
-        let state = config_read(&mut deps.storage).load().unwrap();
+        let state = CONFIG.load(&mut deps.storage).unwrap();
         assert_eq!(
             state,
             State {
@@ -648,13 +645,13 @@ mod tests {
 
         assert_eq!(
             msg,
-            &CosmosMsg::Bank(BankMsg::Send {
+            &SubMsg::new(BankMsg::Send {
                 to_address: TEST_VOTER.to_string(),
                 amount: coins(11, VOTING_TOKEN),
             })
         );
 
-        let state = config_read(&mut deps.storage).load().unwrap();
+        let state = CONFIG.load(&mut deps.storage).unwrap();
         assert_eq!(
             state,
             State {
@@ -668,7 +665,7 @@ mod tests {
 
     #[test]
     fn fails_withdraw_voting_tokens_no_stake() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let info = mock_info(TEST_VOTER, &coins(11, VOTING_TOKEN));
@@ -687,7 +684,7 @@ mod tests {
 
     #[test]
     fn fails_withdraw_too_many_tokens() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::StakeVotingTokens {};
@@ -706,7 +703,7 @@ mod tests {
         match res {
             Ok(_) => panic!("Must return error"),
             Err(ContractError::ExcessiveWithdraw { max_amount }) => {
-                assert_eq!(max_amount, Uint128(10))
+                assert_eq!(max_amount, Uint128::new(10))
             }
             Err(e) => panic!("Unexpected error: {:?}", e),
         }
@@ -714,7 +711,7 @@ mod tests {
 
     #[test]
     fn fails_cast_vote_twice() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let (env, info) = mock_info_height(TEST_CREATOR, &coins(2, VOTING_TOKEN), 0, 10000);
@@ -764,7 +761,7 @@ mod tests {
 
     #[test]
     fn fails_cast_vote_without_poll() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::CastVote {
@@ -785,7 +782,7 @@ mod tests {
 
     #[test]
     fn happy_days_stake_voting_tokens() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         mock_instantiate(deps.as_mut());
 
         let msg = ExecuteMsg::StakeVotingTokens {};
@@ -798,7 +795,7 @@ mod tests {
 
     #[test]
     fn fails_insufficient_funds() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
 
         // initialize the store
         let msg = init_msg();
@@ -821,7 +818,7 @@ mod tests {
 
     #[test]
     fn fails_staking_wrong_token() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
 
         // initialize the store
         let msg = init_msg();
@@ -857,15 +854,15 @@ mod tests {
             vec![
                 attr("action", "create_poll"),
                 attr("creator", creator),
-                attr("poll_id", poll_id),
-                attr("quorum_percentage", quorum),
-                attr("end_height", end_height),
-                attr("start_height", start_height),
+                attr("poll_id", poll_id.to_string()),
+                attr("quorum_percentage", quorum.to_string()),
+                attr("end_height", end_height.to_string()),
+                attr("start_height", start_height.to_string()),
             ]
         );
 
         //confirm poll count
-        let state = config_read(deps.storage).load().unwrap();
+        let state = CONFIG.load(deps.storage).unwrap();
         assert_eq!(
             state,
             State {
@@ -885,7 +882,7 @@ mod tests {
     ) {
         assert_eq!(execute_res, Response::default());
 
-        let state = config_read(deps.storage).load().unwrap();
+        let state = CONFIG.load(deps.storage).unwrap();
         assert_eq!(
             state,
             State {
@@ -902,8 +899,8 @@ mod tests {
             execute_res.attributes,
             vec![
                 attr("action", "vote_casted"),
-                attr("poll_id", poll_id),
-                attr("weight", weight),
+                attr("poll_id", poll_id.to_string()),
+                attr("weight", weight.to_string()),
                 attr("voter", voter),
             ]
         );

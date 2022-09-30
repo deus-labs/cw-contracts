@@ -1,15 +1,13 @@
-use crate::state::PollStatus;
+use crate::state::{PollStatus, State};
 use cosmwasm_std::Uint128;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     pub denom: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     CastVote {
         poll_id: u64,
@@ -31,15 +29,18 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(State)]
     Config {},
+    #[returns(TokenStakeResponse)]
     TokenStake { address: String },
+    #[returns(PollResponse)]
     Poll { poll_id: u64 },
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct PollResponse {
     pub creator: String,
     pub status: PollStatus,
@@ -49,17 +50,17 @@ pub struct PollResponse {
     pub description: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct CreatePollResponse {
     pub poll_id: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct PollCountResponse {
     pub poll_count: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct TokenStakeResponse {
     pub token_balance: Uint128,
 }

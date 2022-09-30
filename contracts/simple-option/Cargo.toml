@@ -28,7 +28,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 cosmwasm-std = "1.1.0"
 cw-storage-plus = "0.13.4"
 cosmwasm-schema = "1.1.0"
-thiserror = { version = "1.0.31" }
+thiserror = "1.0.31"
 
 [dev-dependencies]
 

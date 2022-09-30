@@ -3,13 +3,13 @@ use cosmwasm_std::{
     Response, StdResult,
 };
 
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
 use crate::error::ContractError;
 use crate::helper::extract_budget_coin;
 use crate::matching::{calculate_clr, QuadraticFundingAlgorithm, RawGrant};
 use crate::msg::{AllProposalsResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{Config, Proposal, Vote, CONFIG, PROPOSALS, PROPOSAL_SEQ, VOTES};
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
 
 // Note, you can use StdResult in some functions where you do not
 // make use of the custom errors
@@ -116,7 +116,7 @@ pub fn execute_create_proposal(
         fund_address,
         ..Default::default()
     };
-    PROPOSALS.save(deps.storage, id.into(), &p)?;
+    PROPOSALS.save(deps.storage, id, &p)?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "create_proposal"),
@@ -149,7 +149,7 @@ pub fn execute_vote_proposal(
     let fund = extract_budget_coin(&info.funds, &config.budget.denom)?;
 
     // check existence of the proposal and collect funds in proposal
-    let proposal = PROPOSALS.update(deps.storage, proposal_id.into(), |op| match op {
+    let proposal = PROPOSALS.update(deps.storage, proposal_id, |op| match op {
         None => Err(ContractError::ProposalNotFound {}),
         Some(mut proposal) => {
             proposal.collected_funds += fund.amount;
@@ -164,7 +164,7 @@ pub fn execute_vote_proposal(
     };
 
     // check sender did not voted on proposal
-    let vote_key = VOTES.key((proposal_id.into(), info.sender.as_bytes()));
+    let vote_key = VOTES.key((proposal_id, info.sender.as_bytes()));
     if vote_key.may_load(deps.storage)?.is_some() {
         return Err(ContractError::AddressAlreadyVotedProject {});
     }
@@ -207,7 +207,7 @@ pub fn execute_trigger_distribution(
     // collect proposals under grants
     for p in proposals {
         let vote_query: StdResult<Vec<(Vec<u8>, Vote)>> = VOTES
-            .prefix(p.id.into())
+            .prefix(p.id)
             .range(deps.storage, None, None, Order::Ascending)
             .collect();
 
@@ -259,7 +259,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_proposal_id(deps: Deps, id: u64) -> StdResult<Proposal> {
-    PROPOSALS.load(deps.storage, id.into())
+    PROPOSALS.load(deps.storage, id)
 }
 
 fn query_all_proposals(deps: Deps) -> StdResult<AllProposalsResponse> {
@@ -600,7 +600,7 @@ mod tests {
             ..Default::default()
         };
 
-        let err = PROPOSALS.save(&mut deps.storage, 1_u64.into(), &proposal);
+        let err = PROPOSALS.save(&mut deps.storage, 1_u64, &proposal);
         match err {
             Ok(_) => {}
             e => panic!("unexpected error, got {:?}", e),
@@ -621,7 +621,7 @@ mod tests {
             fund_address: Default::default(),
             ..Default::default()
         };
-        let _ = PROPOSALS.save(&mut deps.storage, 1_u64.into(), &proposal);
+        let _ = PROPOSALS.save(&mut deps.storage, 1_u64, &proposal);
 
         let proposal1 = Proposal {
             id: 2,
@@ -631,7 +631,7 @@ mod tests {
             fund_address: Default::default(),
             ..Default::default()
         };
-        let _ = PROPOSALS.save(&mut deps.storage, 2_u64.into(), &proposal1);
+        let _ = PROPOSALS.save(&mut deps.storage, 2_u64, &proposal1);
         let res = query_all_proposals(deps.as_ref()).unwrap();
 
         assert_eq!(

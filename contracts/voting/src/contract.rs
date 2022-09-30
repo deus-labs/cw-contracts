@@ -3,10 +3,11 @@ use crate::error::ContractError;
 use crate::msg::{
     CreatePollResponse, ExecuteMsg, InstantiateMsg, PollResponse, QueryMsg, TokenStakeResponse,
 };
-use crate::state::{
-    CONFIG, POLLS, BANK, Poll, PollStatus, State, Voter,
+use crate::state::{Poll, PollStatus, State, Voter, BANK, CONFIG, POLLS};
+use cosmwasm_std::{
+    attr, coin, entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, Storage, SubMsg, Uint128,
 };
-use cosmwasm_std::{attr, coin, entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Storage, Uint128, SubMsg};
 
 pub const VOTING_TOKEN: &str = "voting_token";
 pub const DEFAULT_END_HEIGHT_BLOCKS: &u64 = &100_800_u64;
@@ -107,7 +108,7 @@ pub fn withdraw_voting_tokens(
     let sender_address_raw = info.sender.as_str().as_bytes();
 
     if let Some(mut token_manager) = BANK.may_load(deps.storage, sender_address_raw)? {
-        let largest_staked = locked_amount(&sender_address_raw, deps.storage);
+        let largest_staked = locked_amount(sender_address_raw, deps.storage);
         let withdraw_amount = amount.unwrap_or(token_manager.token_balance);
         if largest_staked + withdraw_amount > token_manager.token_balance {
             let max_amount = token_manager.token_balance.checked_sub(largest_staked)?;
@@ -213,7 +214,10 @@ pub fn create_poll(
         attr("action", "create_poll"),
         attr("creator", new_poll.creator),
         attr("poll_id", &poll_id.to_string()),
-        attr("quorum_percentage", quorum_percentage.unwrap_or(0).to_string()),
+        attr(
+            "quorum_percentage",
+            quorum_percentage.unwrap_or(0).to_string(),
+        ),
         attr("end_height", new_poll.end_height.to_string()),
         attr("start_height", start_height.unwrap_or(0).to_string()),
     ];
@@ -306,7 +310,7 @@ pub fn end_poll(
     if !passed {
         a_poll.status = PollStatus::Rejected
     }
-    POLLS.save(deps.storage,key, &a_poll)?;
+    POLLS.save(deps.storage, key, &a_poll)?;
 
     for voter in &a_poll.voters {
         unlock_tokens(deps.storage, voter, poll_id)?;
@@ -329,7 +333,7 @@ fn unlock_tokens(
     poll_id: u64,
 ) -> Result<Response, ContractError> {
     let voter_key = voter.as_str().as_bytes();
-    let mut token_manager = BANK.load(storage,voter_key).unwrap();
+    let mut token_manager = BANK.load(storage, voter_key).unwrap();
 
     // unlock entails removing the mapped poll_id, retaining the rest
     token_manager.locked_tokens.retain(|(k, _)| k != &poll_id);
@@ -339,7 +343,7 @@ fn unlock_tokens(
 
 // finds the largest locked amount in participated polls.
 fn locked_amount(voter: &[u8], storage: &dyn Storage) -> Uint128 {
-    let token_manager = BANK.load(storage,voter).unwrap();
+    let token_manager = BANK.load(storage, voter).unwrap();
     token_manager
         .locked_tokens
         .iter()
@@ -406,10 +410,12 @@ pub fn cast_vote(
 fn send_tokens(to_address: &Addr, amount: Vec<Coin>, action: &str) -> Response {
     let attributes = vec![attr("action", action), attr("to", to_address.clone())];
 
-    Response::new().add_submessage(SubMsg::new(BankMsg::Send {
-        to_address: to_address.to_string(),
-        amount,
-    })).add_attributes(attributes)
+    Response::new()
+        .add_submessage(SubMsg::new(BankMsg::Send {
+            to_address: to_address.to_string(),
+            amount,
+        }))
+        .add_attributes(attributes)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -444,7 +450,8 @@ fn query_poll(deps: Deps, poll_id: u64) -> StdResult<Binary> {
 }
 
 fn token_balance(deps: Deps, address: Addr) -> StdResult<Binary> {
-    let token_manager = BANK.may_load(deps.storage, address.as_str().as_bytes())?
+    let token_manager = BANK
+        .may_load(deps.storage, address.as_str().as_bytes())?
         .unwrap_or_default();
 
     let resp = TokenStakeResponse {

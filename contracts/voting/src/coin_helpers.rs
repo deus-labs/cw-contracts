@@ -31,12 +31,12 @@ mod test {
 
     #[test]
     fn assert_sent_sufficient_coin_works() {
-        match validate_sent_sufficient_coin(&vec![], Some(coin(0, "token"))) {
+        match validate_sent_sufficient_coin(&[], Some(coin(0, "token"))) {
             Ok(()) => {}
             Err(e) => panic!("Unexpected error: {:?}", e),
         };
 
-        match validate_sent_sufficient_coin(&vec![], Some(coin(5, "token"))) {
+        match validate_sent_sufficient_coin(&[], Some(coin(5, "token"))) {
             Ok(()) => panic!("Should have raised insufficient funds error"),
             Err(ContractError::InsufficientFundsSent {}) => {}
             Err(e) => panic!("Unexpected error: {:?}", e),

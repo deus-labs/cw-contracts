@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod test_module {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coin, coins, from_binary, Coin, Deps, DepsMut};
 

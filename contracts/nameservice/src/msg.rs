@@ -1,6 +1,6 @@
-use cosmwasm_std::Coin;
+use crate::state::Config;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use crate::state::{Config};
+use cosmwasm_std::Coin;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -36,11 +36,11 @@ pub struct ConfigResponse {
     pub transfer_price: Option<Coin>,
 }
 
-impl Into<ConfigResponse> for Config{
-    fn into(self) -> ConfigResponse {
-        ConfigResponse{
-            purchase_price: self.purchase_price,
-            transfer_price: self.transfer_price,
+impl From<Config> for ConfigResponse {
+    fn from(config: Config) -> ConfigResponse {
+        ConfigResponse {
+            purchase_price: config.purchase_price,
+            transfer_price: config.transfer_price,
         }
     }
 }

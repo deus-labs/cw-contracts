@@ -27,9 +27,7 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(EntryResponse)]
-    QueryEntry {
-        id: u64,
-    },
+    QueryEntry { id: u64 },
     #[returns(ListResponse)]
     QueryList {
         start_after: Option<u64>,

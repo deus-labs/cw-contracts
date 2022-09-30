@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 
-use integer_sqrt::IntegerSquareRoot;
 use cosmwasm_schema::cw_serde;
+use integer_sqrt::IntegerSquareRoot;
 
 #[cw_serde]
 pub enum QuadraticFundingAlgorithm {

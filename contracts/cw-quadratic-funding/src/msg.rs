@@ -1,9 +1,9 @@
 use crate::error::ContractError;
 use crate::matching::QuadraticFundingAlgorithm;
 use crate::state::Proposal;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Env};
 use cw0::Expiration;
-use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
 pub struct InstantiateMsg {

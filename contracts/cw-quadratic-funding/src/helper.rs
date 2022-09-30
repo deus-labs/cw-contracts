@@ -28,14 +28,14 @@ mod tests {
         let c = &[coin(4, denom)];
         let info = mock_info("creator", c);
 
-        let res = extract_budget_coin(&info.funds, &denom.to_string());
+        let res = extract_budget_coin(&info.funds, denom);
         match res {
             Ok(cc) => assert_eq!(c, &[cc]),
             Err(err) => println!("{:?}", err),
         }
         let info = mock_info("creator", &[coin(4, denom), coin(4, "test")]);
 
-        match extract_budget_coin(&info.funds, &denom.to_string()) {
+        match extract_budget_coin(&info.funds, denom) {
             Ok(_) => panic!("expected error"),
             Err(ContractError::WrongCoinSent { .. }) => {}
             Err(err) => println!("{:?}", err),

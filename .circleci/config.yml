@@ -270,7 +270,7 @@ jobs:
           key: cargocache-nameservice-rust:1.59.0-{{ checksum "Cargo.lock" }}
   voting:
     docker:
-      - image: 1.59.0
+      - image: rust:1.59.0
     working_directory: ~/project/contracts/voting
     steps:
       - checkout:

@@ -1,0 +1,323 @@
+{
+  "contract_name": "cw-to-do-list",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "properties": {
+      "owner": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "new_entry"
+        ],
+        "properties": {
+          "new_entry": {
+            "type": "object",
+            "required": [
+              "description"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "priority": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Priority"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "update_entry"
+        ],
+        "properties": {
+          "update_entry": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "priority": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Priority"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Status"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "delete_entry"
+        ],
+        "properties": {
+          "delete_entry": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Priority": {
+        "type": "string",
+        "enum": [
+          "none",
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "to_do",
+          "in_progress",
+          "done",
+          "cancelled"
+        ]
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "query_entry"
+        ],
+        "properties": {
+          "query_entry": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "query_list"
+        ],
+        "properties": {
+          "query_list": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "query_entry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EntryResponse",
+      "type": "object",
+      "required": [
+        "description",
+        "id",
+        "priority",
+        "status"
+      ],
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "priority": {
+          "$ref": "#/definitions/Priority"
+        },
+        "status": {
+          "$ref": "#/definitions/Status"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Priority": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "Status": {
+          "type": "string",
+          "enum": [
+            "to_do",
+            "in_progress",
+            "done",
+            "cancelled"
+          ]
+        }
+      }
+    },
+    "query_list": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ListResponse",
+      "type": "object",
+      "required": [
+        "entries"
+      ],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Entry"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Entry": {
+          "type": "object",
+          "required": [
+            "description",
+            "id",
+            "priority",
+            "status"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "priority": {
+              "$ref": "#/definitions/Priority"
+            },
+            "status": {
+              "$ref": "#/definitions/Status"
+            }
+          },
+          "additionalProperties": false
+        },
+        "Priority": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "Status": {
+          "type": "string",
+          "enum": [
+            "to_do",
+            "in_progress",
+            "done",
+            "cancelled"
+          ]
+        }
+      }
+    }
+  }
+}

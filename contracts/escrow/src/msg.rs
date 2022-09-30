@@ -1,9 +1,8 @@
 use cosmwasm_std::{Addr, Coin};
 use cw_utils::Expiration;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     pub arbiter: String,
     pub recipient: String,
@@ -16,8 +15,7 @@ pub struct InstantiateMsg {
     pub expiration: Option<Expiration>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     Approve {
         // release some coins - if quantity is None, release all coins in balance
@@ -26,14 +24,15 @@ pub enum ExecuteMsg {
     Refund {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Returns a human-readable representation of the arbiter.
+    #[returns(ArbiterResponse)]
     Arbiter {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct ArbiterResponse {
     pub arbiter: Addr,
 }

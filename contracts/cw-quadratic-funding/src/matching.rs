@@ -1,23 +1,21 @@
 use crate::error::ContractError;
 
 use integer_sqrt::IntegerSquareRoot;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_schema::cw_serde;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QuadraticFundingAlgorithm {
     CapitalConstrainedLiberalRadicalism { parameter: String },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct RawGrant {
     pub addr: String,
     pub funds: Vec<u128>,
     pub collected_vote_funds: u128,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct CalculatedGrant {
     pub addr: String,
     pub grant: u128,

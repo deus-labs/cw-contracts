@@ -220,8 +220,6 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
- "schemars",
- "serde",
  "thiserror",
 ]
 

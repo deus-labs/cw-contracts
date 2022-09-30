@@ -20,7 +20,7 @@ pub enum QueryMsg {
     // ResolveAddress returns the current address that the name resolves to
     #[returns(ResolveRecordResponse)]
     ResolveRecord { name: String },
-    #[returns(Config)]
+    #[returns(ConfigResponse)]
     Config {},
 }
 
@@ -28,4 +28,19 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct ResolveRecordResponse {
     pub address: Option<String>,
+}
+
+#[cw_serde]
+pub struct ConfigResponse {
+    pub purchase_price: Option<Coin>,
+    pub transfer_price: Option<Coin>,
+}
+
+impl Into<ConfigResponse> for Config{
+    fn into(self) -> ConfigResponse {
+        ConfigResponse{
+            purchase_price: self.purchase_price,
+            transfer_price: self.transfer_price,
+        }
+    }
 }

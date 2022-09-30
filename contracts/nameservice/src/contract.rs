@@ -4,7 +4,7 @@ use cosmwasm_std::{
 
 use crate::coin_helpers::assert_sent_sufficient_coin;
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ResolveRecordResponse};
+use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, ResolveRecordResponse};
 use crate::state::{Config, NameRecord, NAME_RESOLVER, CONFIG};
 
 const MIN_NAME_LENGTH: u64 = 3;
@@ -95,7 +95,7 @@ pub fn execute_transfer(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ResolveRecord { name } => query_resolver(deps, env, name),
-        QueryMsg::Config {} => to_binary(&CONFIG.load(deps.storage)?),
+        QueryMsg::Config {} => to_binary::<ConfigResponse>(&CONFIG.load(deps.storage)?.into())
     }
 }
 

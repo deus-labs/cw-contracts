@@ -1,6 +1,6 @@
 {
   "contract_name": "cw-nameservice",
-  "contract_version": "0.11.0",
+  "contract_version": "0.12.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",

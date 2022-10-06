@@ -1,8 +1,9 @@
+import { Coin, StdFee } from "@cosmjs/launchpad";
 /*
  * This is a set of helpers meant for use with @cosmjs/cli
  * With these you can easily use the cw20 contract without worrying about forming messages and parsing queries.
  *
- * Usage: npx @cosmjs/cli@^0.23 --init https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/main/nameservice/helpers.ts
+ * Usage: npx @cosmjs/cli@^0.26 --init https://raw.githubusercontent.com/CosmWasm/cosmwasm-examples/main/nameservice/helpers.ts --init https://raw.githubusercontent.com/CosmWasm/testnets/master/network.ts
  *
  * Create a client:
  *   const client = await useOptions(coralnetOptions).setup(password);
@@ -14,110 +15,6 @@
  * If you want to use this code inside an app, you will need several imports from https://github.com/CosmWasm/cosmjs
  */
 
-const path = require("path");
-
-interface Options {
-  readonly httpUrl: string
-  readonly networkId: string
-  readonly feeToken: string
-  readonly gasPrice: GasPrice
-  readonly bech32prefix: string
-  readonly hdPath: HdPath
-  readonly faucetUrl?: string
-  readonly defaultKeyFile: string
-  readonly gasLimits: Partial<GasLimits<CosmWasmFeeTable>> // only set the ones you want to override
-}
-
-const coralnetOptions: Options = {
-  httpUrl: 'https://lcd.coralnet.cosmwasm.com',
-  networkId: 'cosmwasm-coral',
-  feeToken: 'ucosm',
-  gasPrice:  GasPrice.fromString("0.025ucosm"),
-  bech32prefix: 'cosmos',
-  faucetToken: 'SHELL',
-  faucetUrl: 'https://faucet.coralnet.cosmwasm.com/credit',
-  hdPath: makeCosmoshubPath(0),
-  defaultKeyFile: path.join(process.env.HOME, ".coral.key"),
-  gasLimits: {
-    upload: 1500000,
-    init: 600000,
-    register:800000,
-    transfer: 80000,
-  },
-}
-
-interface Network {
-  setup: (password: string, filename?: string) => Promise<SigningCosmWasmClient>
-  recoverMnemonic: (password: string, filename?: string) => Promise<string>
-}
-
-const useOptions = (options: Options): Network => {
-
-  const loadOrCreateWallet = async (options: Options, filename: string, password: string): Promise<Secp256k1HdWallet> => {
-    let encrypted: string;
-    try {
-      encrypted = fs.readFileSync(filename, 'utf8');
-    } catch (err) {
-      // generate if no file exists
-      const wallet = await Secp256k1HdWallet.generate(12, options.hdPath, options.bech32prefix);
-      const encrypted = await wallet.serialize(password);
-      fs.writeFileSync(filename, encrypted, 'utf8');
-      return wallet;
-    }
-    // otherwise, decrypt the file (we cannot put deserialize inside try or it will over-write on a bad password)
-    const wallet = await Secp256k1HdWallet.deserialize(encrypted, password);
-    return wallet;
-  };
-
-  const connect = async (
-    wallet: Secp256k1HdWallet,
-    options: Options
-  ): Promise<SigningCosmWasmClient> => {
-    const [{ address }] = await wallet.getAccounts();
-
-    const client = new SigningCosmWasmClient(
-      options.httpUrl,
-      address,
-      wallet,
-      coralnetOptions.gasPrice,
-      coralnetOptions.gasLimits,
-    );
-    return client;
-  };
-
-  const hitFaucet = async (
-    faucetUrl: string,
-    address: string,
-    denom: string
-  ): Promise<void> => {
-    await axios.post(faucetUrl, { denom, address });
-  }
-
-  const setup = async (password: string, filename?: string): Promise<SigningCosmWasmClient> => {
-    const keyfile = filename || options.defaultKeyFile;
-    const wallet = await loadOrCreateWallet(coralnetOptions, keyfile, password);
-    const client = await connect(wallet, coralnetOptions);
-
-    // ensure we have some tokens
-    if (options.faucetUrl) {
-      const account = await client.getAccount();
-      if (!account) {
-        console.log(`Getting ${options.feeToken} from faucet`);
-        await hitFaucet(options.faucetUrl, client.senderAddress, options.feeToken);
-      }
-    }
-
-    return client;
-  }
-
-  const recoverMnemonic = async (password: string, filename?: string): Promise<string> => {
-    const keyfile = filename || options.defaultKeyFile;
-    const wallet = await loadOrCreateWallet(coralnetOptions, keyfile, password);
-    return wallet.mnemonic;
-  }
-
-  return {setup, recoverMnemonic};
-}
 
 interface Config {
   readonly purchase_price?: Coin
@@ -142,8 +39,8 @@ interface NameServiceInstance {
   config: () => Promise<Config>
 
   // actions
-  register: (name: string, amount: Coin[]) => Promise<any>
-  transfer: (name: string, to: string, amount: Coin[]) => Promise<any>
+  register: (txSigner: string, name: string, amount: Coin[]) => Promise<any>
+  transfer: (txSigner: string, name: string, to: string, amount: Coin[]) => Promise<any>
 }
 
 interface NameServiceContract {
@@ -164,13 +61,13 @@ const NameService = (client: SigningCosmWasmClient): NameServiceContract => {
       return client.queryContractSmart(contractAddress, {config: { }});
     };
 
-    const register = async (name: string, amount: Coin[]): Promise<any> => {
-      const result = await client.execute(contractAddress, {register: { name }}, "", amount);
+    const register = async (txSigner: string, name: string, amount: string): Promise<any> => {
+      const result = await client.execute(txSigner, contractAddress, {register: { name }}, amount);
       return result.transactionHash;
     };
 
-    const transfer = async (name: string, to: string, amount: Coin[]): Promise<any> => {
-      const result = await client.execute(contractAddress, {transfer: { name, to }}, "", amount);
+    const transfer = async (txSigner: string, name: string, to: string, amount: string): Promise<any> => {
+      const result = await client.execute(txSigner, contractAddress, {transfer: { name, to }}, );
       return result.transactionHash;
     };
 
@@ -193,10 +90,10 @@ const NameService = (client: SigningCosmWasmClient): NameServiceContract => {
 
   const upload = async (): Promise<number> => {
     const meta = {
-      source: "https://github.com/CosmWasm/cosmwasm-examples/tree/nameservice-0.7.0/nameservice",
-      builder: "cosmwasm/rust-optimizer:0.10.4"
+      source: "https://github.com/CosmWasm/cosmwasm-examples/tree/nameservice-0.11.0/nameservice",
+      builder: "cosmwasm/rust-optimizer:0.11.5"
     };
-    const sourceUrl = "https://github.com/CosmWasm/cosmwasm-examples/releases/download/nameservice-0.7.0/contract.wasm";
+    const sourceUrl = "https://github.com/CosmWasm/cosmwasm-examples/releases/download/nameservice-0.11.0/contract.wasm";
     const wasm = await downloadWasm(sourceUrl);
     const result = await client.upload(wasm, meta);
     return result.codeId;

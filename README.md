@@ -60,5 +60,5 @@ optimized build for each contract and saves them to the `./artifacts` directory:
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.3 ./contracts/*/
+  cosmwasm/rust-optimizer:0.12.8 ./contracts/*/
 ```

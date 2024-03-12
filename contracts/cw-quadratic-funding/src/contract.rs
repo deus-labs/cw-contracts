@@ -238,13 +238,13 @@ pub fn execute_trigger_distribution(
         }));
     }
 
-    let leftover_msg: CosmosMsg = CosmosMsg::Bank(BankMsg::Send {
-        to_address: config.leftover_addr,
-        amount: vec![coin(leftover, config.budget.denom)],
-    });
-
-    msgs.push(leftover_msg);
-
+    if leftover != 0 {
+        let leftover_msg: CosmosMsg = CosmosMsg::Bank(BankMsg::Send {
+            to_address: config.leftover_addr,
+            amount: vec![coin(leftover, config.budget.denom)],
+        });
+        msgs.push(leftover_msg);
+    }
     Ok(Response::new()
         .add_messages(msgs)
         .add_attribute("action", "trigger_distribution"))
